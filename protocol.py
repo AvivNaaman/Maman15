@@ -44,12 +44,13 @@ class KeyExchangeContent:
     public_key: bytes
 
 
-FILE_UPLOAD_FORMAT = "<255s"
+FILE_UPLOAD_FORMAT = "<255sQ"
 
 
 @dataclass(frozen=True)
 class FileUploadContent:
     file_name: str
+    file_size: int
 
 
 VERIFY_CHECKSUM_FORMAT = "<255s"
@@ -60,22 +61,26 @@ class VerifyChecksumContent:
     file_name: str
 
 
-class ClientRequestPart(ClientRequestType):
-    Header = auto()
+class ClientRequestPart(Enum):
+    Header = 0
+    RegisterContent = auto()
+    KeyExchangeContent = auto()
+    UploadFileInfoContent = auto()
+    VerifyChecksumContent = auto()
 
 
 RequestParseInfoMap = {
     ClientRequestPart.Header: (HEADER_STRUCT_FORMAT, RequestHeader),
-    ClientRequestPart.Register: (REGISTER_REQUEST_FORMAT, RegisterRequestContent),
-    ClientRequestPart.KeyExchange: (KEY_EXCHANGE_FORMAT, KeyExchangeContent),
-    ClientRequestPart.UploadFile: (KEY_EXCHANGE_FORMAT, KeyExchangeContent),
-    ClientRequestPart.VerifyChecksum: (VERIFY_CHECKSUM_FORMAT, VerifyChecksumContent),
+    ClientRequestPart.RegisterContent: (REGISTER_REQUEST_FORMAT, RegisterRequestContent),
+    ClientRequestPart.KeyExchangeContent: (KEY_EXCHANGE_FORMAT, KeyExchangeContent),
+    ClientRequestPart.UploadFileInfoContent: (KEY_EXCHANGE_FORMAT, KeyExchangeContent),
+    ClientRequestPart.VerifyChecksumContent: (VERIFY_CHECKSUM_FORMAT, VerifyChecksumContent),
 }
 
 AES_KEY_SIZE_BYTES = 10
 
 
-def parse_request_part(client: socket, req_type: ClientRequestType):
+def parse_request_part(client: socket, req_type: ClientRequestPart):
     fmt, type_to_construct = RequestParseInfoMap[req_type]
     recv_size = struct.calcsize(fmt)
     read_bytes = client.recv(recv_size)

@@ -1,5 +1,5 @@
 import socket
-from client_handler import ClientSession
+from client_session import ClientSession
 import logging
 
 from db import Database
