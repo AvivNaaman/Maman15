@@ -3,4 +3,8 @@ project(client)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(client main.cpp)
+include_directories(/opt/homebrew/Cellar/boost/1.79.0_2/include)
+
+add_executable(client main.cpp Client.cpp Client.h util.cpp util.h)
+add_subdirectory(cryptopp_wrapper)
+target_link_libraries(client cryptopp_wrapper)

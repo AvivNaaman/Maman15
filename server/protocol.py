@@ -5,42 +5,48 @@ import struct
 
 
 class ClientRequestType(Enum):
-    Register = 0
-    KeyExchange = auto()
-    UploadFile = auto()
-    VerifyChecksum = auto()
+    Register = 1100
+    KeyExchange = 1101
+    UploadFile = 1103
+    ValidChecksum = 1104
+    InvalidChecksumRetry = 1105
+    InvalidChecksumAbort = 1106
 
 
 class ServerResponseType(Enum):
-    RegisterSuccess = 0,
-    ExchangeAes = 1,
-    FileUploaded = 2,
-    ServerError = 3
+    RegisterSuccess = 2100
+    ExchangeAes = 2102
+    FileUploaded = 2103
+    MessageOk = 2104
+    ServerError = -1
 
 
 # Little endian: unsigned short | 16-char string
-HEADER_STRUCT_FORMAT = "<H16s"
+HEADER_STRUCT_FORMAT = "<16sBHL"
 
 
 @dataclass(frozen=True)
 class RequestHeader:
-    request_type: ClientRequestType
     user_id: str
+    version: int
+    code: ClientRequestType
+    payload_size: int
 
 
-REGISTER_REQUEST_FORMAT = "<127s"
+REGISTER_REQUEST_FORMAT = "<255s"
 
 
 @dataclass(frozen=True)
 class RegisterRequestContent:
-    user_name: str
+    name: str
 
 
-KEY_EXCHANGE_FORMAT = "<160s"
+KEY_EXCHANGE_FORMAT = "<255s160s"
 
 
 @dataclass(frozen=True)
 class KeyExchangeContent:
+    name: str
     public_key: bytes
 
 
@@ -58,7 +64,7 @@ VERIFY_CHECKSUM_FORMAT = "<255s"
 
 @dataclass(frozen=True)
 class VerifyChecksumContent:
-    file_name: str
+    pass
 
 
 class ClientRequestPart(Enum):

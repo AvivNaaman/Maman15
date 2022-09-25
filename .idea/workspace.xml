@@ -1,7 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="6ab61774-e15d-408d-a400-bfa360e79e06" name="Changes" comment="Add utils for crypto, rename client_handler.py -&gt; client_session.py, logging config" />
+    <list default="true" id="6ab61774-e15d-408d-a400-bfa360e79e06" name="Changes" comment="Add utils for crypto, rename client_handler.py -&gt; client_session.py, logging config">
+      <change afterPath="$PROJECT_DIR$/client/Client.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/client/Client.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/client/cryptopp_wrapper/AESWrapper.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/client/cryptopp_wrapper/AESWrapper.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/client/cryptopp_wrapper/Base64Wrapper.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/client/cryptopp_wrapper/Base64Wrapper.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/client/cryptopp_wrapper/CMakeLists.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/client/cryptopp_wrapper/RSAWrapper.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/client/cryptopp_wrapper/RSAWrapper.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/client/transfer.info" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/client/util.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/client/util.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/client/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/client/main.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/client_session.py" beforeDir="false" afterPath="$PROJECT_DIR$/server/client_session.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/server/db.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/protocol.py" beforeDir="false" afterPath="$PROJECT_DIR$/server/protocol.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/server/utils.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -75,7 +95,9 @@
       <updated>1662294063794</updated>
       <workItem from="1662294064955" duration="5602000" />
       <workItem from="1662299697331" duration="10538000" />
-      <workItem from="1662752876690" duration="57000" />
+      <workItem from="1662752876690" duration="406000" />
+      <workItem from="1663404486661" duration="598000" />
+      <workItem from="1664022349602" duration="9000" />
     </task>
     <task id="LOCAL-00001" summary="initial commite">
       <created>1662303965833</created>
