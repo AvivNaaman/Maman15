@@ -6,11 +6,7 @@ from socket import socket
 import utils
 from utils import crc, encrypt_with_rsa
 from db import Database
-from protocol import RequestHeader, RegisterRequestContent, \
-    KeyExchangeContent, FileUploadContent, \
-    VerifyChecksumContent, parse_request_part, \
-    ClientRequestPart, AES_KEY_SIZE_BYTES, \
-    ClientRequestType
+from protocol import *
 
 
 # TODO: Check whether protocol should support just login.
@@ -39,8 +35,10 @@ class ClientSession(threading.Thread):
     def register(self, header):
         reg_content: RegisterRequestContent = parse_request_part(self.__client, ClientRequestPart.RegisterContent)
 
-        self.__db.register_user(reg_content.name)
-
+        new_id = self.__db.register_user(reg_content.name)
+        header = ResponseHeader()
+        header.code = ServerResponseType.RegisterSuccess
+        header.payload_size =
         # TODO: Return OK
         pass
 

@@ -94,6 +94,31 @@ RequestParseInfoMap = {
 AES_KEY_SIZE_BYTES = 10
 
 
+@dataclass
+class ResponseHeader:
+    version: int = 1
+    code: ServerResponseType = ServerResponseType.MessageOk
+    payload_size: int = 0
+
+
+@dataclass
+class RegisterSuccessResponse:
+    client_id: bytes
+
+
+@dataclass
+class KeyExchangeResponse:
+    client_id: bytes
+    aes_key: bytes
+
+
+@dataclass
+class FileUploadResponse:
+    client_id: bytes
+    content_size: int
+    file_name: str
+    cksum: int
+
 def remove_null_terminator(input_string: str) -> str:
     return input_string.split('\0', 1)[0]
 
@@ -127,3 +152,11 @@ def parse_request_part(client: socket, req_type: ClientRequestPart):
     result = type_to_construct(*parsed_args)
     process_strings(result)
     return result
+
+ResponseEncodeMap = {
+    RegisterSuccessResponse: "<16s",
+    KeyExchangeResponse: "<16s",
+    FileUploadResponse: "<16s",
+}
+
+def respond_to_client(code: ServerResponseType, payload):
