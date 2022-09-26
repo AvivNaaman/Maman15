@@ -2,6 +2,7 @@ from dataclasses import dataclass, fields
 from enum import Enum, auto
 from socket import socket
 import struct
+from typing import Any
 
 # ASCII with range(256) to support garbage.
 TEXT_ENCODING = 'charmap'
@@ -30,7 +31,7 @@ class AutoParseDataClassStrings:
 
 
 # Little endian: unsigned short | 16-char string
-HEADER_STRUCT_FORMAT = "<16sBHL"
+REQUEST_HEADER_FMT = "<16sBHL"
 
 
 @dataclass
@@ -41,7 +42,7 @@ class RequestHeader(AutoParseDataClassStrings):
     payload_size: int
 
 
-REGISTER_REQUEST_FORMAT = "<255s"
+REQUEST_REGISTER_FMT = "<255s"
 
 
 @dataclass
@@ -49,7 +50,7 @@ class RegisterRequestContent(AutoParseDataClassStrings):
     name: str
 
 
-KEY_EXCHANGE_FORMAT = "<255s160s"
+REQUEST_KEY_EXCHANGE_FORMAT = "<255s160s"
 
 
 @dataclass
@@ -58,7 +59,7 @@ class KeyExchangeContent(AutoParseDataClassStrings):
     public_key: bytes
 
 
-FILE_UPLOAD_FORMAT = "<255sQ"
+REQUEST_UPLOAD_FORMAT = "<255sQ"
 
 
 @dataclass
@@ -67,7 +68,7 @@ class FileUploadContent(AutoParseDataClassStrings):
     file_size: int
 
 
-VERIFY_CHECKSUM_FORMAT = "<255s"
+REQUEST_VERIFY_CHECKSUM_FMT = "<255s"
 
 
 @dataclass
@@ -84,11 +85,11 @@ class ClientRequestPart(Enum):
 
 
 RequestParseInfoMap = {
-    ClientRequestPart.Header: (HEADER_STRUCT_FORMAT, RequestHeader),
-    ClientRequestPart.RegisterContent: (REGISTER_REQUEST_FORMAT, RegisterRequestContent),
-    ClientRequestPart.KeyExchangeContent: (KEY_EXCHANGE_FORMAT, KeyExchangeContent),
-    ClientRequestPart.UploadFileInfoContent: (KEY_EXCHANGE_FORMAT, KeyExchangeContent),
-    ClientRequestPart.VerifyChecksumContent: (VERIFY_CHECKSUM_FORMAT, VerifyChecksumContent),
+    ClientRequestPart.Header: (REQUEST_HEADER_FMT, RequestHeader),
+    ClientRequestPart.RegisterContent: (REQUEST_REGISTER_FMT, RegisterRequestContent),
+    ClientRequestPart.KeyExchangeContent: (REQUEST_KEY_EXCHANGE_FORMAT, KeyExchangeContent),
+    ClientRequestPart.UploadFileInfoContent: (REQUEST_KEY_EXCHANGE_FORMAT, KeyExchangeContent),
+    ClientRequestPart.VerifyChecksumContent: (REQUEST_VERIFY_CHECKSUM_FMT, VerifyChecksumContent),
 }
 
 AES_KEY_SIZE_BYTES = 10
@@ -144,7 +145,7 @@ def process_strings(data_class):
         setattr(data_class, field.name, value)
 
 
-def parse_request_part(client: socket, req_type: ClientRequestPart):
+def receive_request_part(client: socket, req_type: ClientRequestPart) -> Any:
     fmt, type_to_construct = RequestParseInfoMap[req_type]
     recv_size = struct.calcsize(fmt)
     read_bytes = client.recv(recv_size)
@@ -153,10 +154,26 @@ def parse_request_part(client: socket, req_type: ClientRequestPart):
     process_strings(result)
     return result
 
+
 ResponseEncodeMap = {
     RegisterSuccessResponse: "<16s",
     KeyExchangeResponse: "<16s",
     FileUploadResponse: "<16s",
 }
 
-def respond_to_client(code: ServerResponseType, payload):
+
+def encode_response_part(obj_to_encode: Any):
+    fmt = ResponseEncodeMap[type(obj_to_encode)]
+    vals = [obj_to_encode[f.name] for f in fields(obj_to_encode)]
+    return struct.pack(fmt, *vals)
+
+
+def get_response(code: ServerResponseType, payload) -> bytes:
+    # TODO: Support variable-size response in fields.
+    payload_bytes = encode_response_part(payload)
+
+    header = ResponseHeader(code=code, payload_size=len(payload_bytes))
+    header_bytes = encode_response_part(header)
+
+    return header_bytes + payload_bytes
+

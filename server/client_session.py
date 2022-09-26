@@ -21,29 +21,23 @@ class ClientSession(threading.Thread):
         # Until connection is closed, handle requests
         while True:
             # Get Header
-            header: RequestHeader = parse_request_part(self.__client, ClientRequestPart.Header)
+            header: RequestHeader = receive_request_part(self.__client, ClientRequestPart.Header)
             header_request = ClientRequestType(header.code)
-            if header_request == ClientRequestType.Register:
-                self.register(header)
-            elif header_request == ClientRequestType.KeyExchange:
-                self.key_exchange(header)
-            elif header_request == ClientRequestType.UploadFile:
-                self.upload_file(header)
-            elif header_request == ClientRequestType.ValidChecksum:
-                self.verify_checksum(header)
+            # Execute logic by request type
+            self.HANDLERS_MAP[header_request](header)
 
-    def register(self, header):
-        reg_content: RegisterRequestContent = parse_request_part(self.__client, ClientRequestPart.RegisterContent)
+    def register(self, _):
+        reg_content: RegisterRequestContent = receive_request_part(self.__client, ClientRequestPart.RegisterContent)
 
         new_id = self.__db.register_user(reg_content.name)
-        header = ResponseHeader()
-        header.code = ServerResponseType.RegisterSuccess
-        header.payload_size =
-        # TODO: Return OK
-        pass
+
+        payload = RegisterSuccessResponse(new_id.bytes)
+        response = get_response(ServerResponseType.RegisterSuccess, payload)
+
+        self.__client.send(response)
 
     def key_exchange(self, header):
-        keyx_content: KeyExchangeContent = parse_request_part(self.__client, ClientRequestPart.KeyExchangeContent)
+        keyx_content: KeyExchangeContent = receive_request_part(self.__client, ClientRequestPart.KeyExchangeContent)
 
         # Gen AES Key
         aes_key = os.urandom(AES_KEY_SIZE_BYTES)
@@ -55,8 +49,8 @@ class ClientSession(threading.Thread):
         encrypted_aes = encrypt_with_rsa(keyx_content.public_key, aes_key)
 
     def upload_file(self, header):
-        upload_content: FileUploadContent = parse_request_part(self.__client,
-                                                               ClientRequestPart.UploadFileInfoContent)
+        upload_content: FileUploadContent = receive_request_part(self.__client,
+                                                                 ClientRequestPart.UploadFileInfoContent)
         current_user_id = header.user_id
         aes_key = self.__db.get_aes_for_user(uuid.UUID(bytes=current_user_id))
 
@@ -74,3 +68,10 @@ class ClientSession(threading.Thread):
 
         # TODO: Return OK
         pass
+
+    HANDLERS_MAP = {
+        ClientRequestType.Register: register,
+        ClientRequestType.KeyExchange: key_exchange,
+        ClientRequestType.UploadFile: upload_file,
+        ClientRequestType.ValidChecksum: verify_checksum
+    }
