@@ -22,6 +22,7 @@
     <VCProjectVersion>17.0</VCProjectVersion>
     <ProjectGuid>{9E3524C5-EC9E-4EF9-96FB-A0672359442D}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -97,22 +98,20 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Client.cpp" />
-    <ClCompile Include="cmake-build-debug\cmakefiles\3.23.2\compileridcxx\CMakeCXXCompilerId.cpp" />
-    <ClCompile Include="cmake-build-debug\cmakefiles\3.23.2\compileridc\CMakeCCompilerId.c" />
-    <ClCompile Include="cryptopp_wrapper\AESWrapper.cpp" />
-    <ClCompile Include="cryptopp_wrapper\Base64Wrapper.cpp" />
-    <ClCompile Include="cryptopp_wrapper\main.cpp" />
-    <ClCompile Include="cryptopp_wrapper\RSAWrapper.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="util.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Client.h" />
-    <ClInclude Include="cryptopp_wrapper\AESWrapper.h" />
-    <ClInclude Include="cryptopp_wrapper\Base64Wrapper.h" />
-    <ClInclude Include="cryptopp_wrapper\RSAWrapper.h" />
+    <ClInclude Include="protocol.h" />
     <ClInclude Include="util.h" />
   </ItemGroup>
   <ItemGroup>

@@ -61,11 +61,12 @@ CREATE TABLE IF NOT EXISTS files (
         self.__load_data()
 
     def __connect_sqlite(self):
-        logging.info("Connecting to database, and creating tables if don't exist.")
-        conn = sqlite3.connect(self.LOCAL_DB_FILE_NAME)
+        logging.info("Connecting to local SQLite database.")
+        conn = sqlite3.connect(self.LOCAL_DB_FILE_NAME, check_same_thread=False)
         return conn
 
     def __ensure_tables_exist(self):
+        logging.info("Making sure all tables exist.")
         cursor = self.sqlite_conn.cursor()
         cursor.execute(self.CREATE_USERS_SQL)
         cursor.execute(self.CREATE_FILES_SQL)

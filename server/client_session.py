@@ -26,14 +26,14 @@ class ClientSession(threading.Thread):
         while True:
             # Get Header
             header: RequestHeader = parse_request_part(self.__client, ClientRequestPart.Header)
-
-            if header.code == ClientRequestType.Register:
+            header_request = ClientRequestType(header.code)
+            if header_request == ClientRequestType.Register:
                 self.register(header)
-            elif header.code == ClientRequestType.KeyExchange:
+            elif header_request == ClientRequestType.KeyExchange:
                 self.key_exchange(header)
-            elif header.code == ClientRequestType.UploadFile:
+            elif header_request == ClientRequestType.UploadFile:
                 self.upload_file(header)
-            elif header.code == ClientRequestType.VerifyChecksum:
+            elif header_request == ClientRequestType.ValidChecksum:
                 self.verify_checksum(header)
 
     def register(self, header):

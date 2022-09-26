@@ -1,2 +1,7 @@
-cmake-build-debug
+cmake-build-debug*
+x64
+x86
+Debug
+Release
+.vs
 

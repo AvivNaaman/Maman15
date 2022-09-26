@@ -1,15 +1,11 @@
-//
-// Created by Aviv Naaman on 17/09/2022.
-//
-
-#ifndef CLIENT_CLIENT_H
-#define CLIENT_CLIENT_H
+#pragma once
 
 
 #include <string>
 #include <filesystem>
 #include <boost/asio.hpp>
 #include "util.h"
+#include "protocol.h"
 
 using boost::asio::ip::tcp;
 
@@ -18,48 +14,62 @@ using boost::asio::ip::tcp;
  */
 class Client {
 private:
+	/* Socket, Resolver and IO Context */
 	boost::asio::io_context client_io_ctx;
 	tcp::resolver srv_resolver;
 	tcp::socket socket;
 
+	/// <summary>
+	/// Current user's user name.
+	/// </summary>
 	std::string user_name;
+
+	/// <summary>
+	/// Current user's ID
+	/// </summary>
 	u_char user_id[USER_ID_BYTE_LENGTH];
 
 	// public + private + AES keys
 public:
 	static const std::string INFO_FILE_NAME;
 
-	/**
-	 * Starts a new client session.
-	 * @param server_endpoint The server endpoint name (e.g. IP Address or hostname)
-	 * @param port The server destination port
-	 * @param data_file_name The client data file name.
-	 */
-	Client(const std::string &host, int port);
+	/// <summary>
+	/// Starts a new client session to the secure file server.
+	/// </summary>
+	/// <param name="host">The server's host name</param>
+	/// <param name="port">The server's port number.</param>
+	Client(const std::string& host, int port);
 
-	/**
-	 * Requests a registration from the server.
-	 * @param name The user name to provide for the server
-	 * @return The server-generated user ID
-	 */
-	char *register_user(std::string name);
+	/// <summary>
+	/// Requests a registration from the server.
+	/// </summary>
+	/// <param name="name">The user name to provide for the server</param>
+	/// <returns>The server - generated user ID</returns>
+	void register_user(std::string name);
 
-	/**
-	 * Executes a key-exchange with the server.
-	 * @return the server's secret AES Key.
-	 */
-	char *exchange_keys();
 
-	/**
-	 * Sends a file to the server.
-	 * @param file_path The local file path to send.
-	 */
+	/// <summary>
+	/// Executes a key-exchange of the client with the server.
+	/// </summary>
+	/// <returns>the server's secret AES Key.</returns>
+	char* exchange_keys();
+
+	/// <summary>
+	///  Sends a file to the server.
+	/// </summary>
+	/// <param name="file_path">The local file path to send.</param>
 	void send_file(std::filesystem::path file_path);
 
 private:
+
+	/// <summary>
+	/// Loads the information file data of an already registered user to the client.
+	/// </summary>
 	void load_info_file();
+
+	/// <summary>
+	/// Saves the current client's registered user data to the information file.
+	/// </summary>
 	void save_info_file();
 };
 
-
-#endif //CLIENT_CLIENT_H

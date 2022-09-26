@@ -37,8 +37,8 @@ TransferInfo get_transfer_information() {
 int main() {
 	auto tinfo = get_transfer_information();
 	char address[] = "localhost";
-	Client c(address, 8085);
-//	c.register_user("Aviv Naaman");
+	Client c(tinfo.host, tinfo.port);
+	c.register_user(tinfo.user_name);
 //	c.exchange_keys();
 //	c.send_file("/Users/avivnaaman/Desktop/cropper.py");
 	return 0;
