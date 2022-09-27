@@ -30,6 +30,7 @@ private:
 	u_char user_id[USER_ID_BYTE_LENGTH];
 
 	// public + private + AES keys
+	std::string public_key, private_key, aes_key;
 public:
 	static const std::string INFO_FILE_NAME;
 
@@ -52,7 +53,7 @@ public:
 	/// Executes a key-exchange of the client with the server.
 	/// </summary>
 	/// <returns>the server's secret AES Key.</returns>
-	char* exchange_keys();
+	void exchange_keys();
 
 	/// <summary>
 	///  Sends a file to the server.
@@ -71,5 +72,12 @@ private:
 	/// Saves the current client's registered user data to the information file.
 	/// </summary>
 	void save_info_file();
+
+	/// <summary>
+	/// Prepares a request object to send.
+	/// </summary>
+	/// <param name="to_prepare">The object to prepare</param>
+	/// <param name="code">The request code to send</param>
+	void prepare_request(ClientRequestBase& to_prepare, ClientRequestsCode code);
 };
 

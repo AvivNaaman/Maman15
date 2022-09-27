@@ -10,21 +10,23 @@
 #define MAX_FILENAME_SIZE (255)
 #define EXCHANGED_AES_KEY_SIZE_LIMIT (512)
 
-enum ClientRequestsType : uint16_t {
-	Register = 1100,
-	KeyExchange = 1101,
-	UploadFile = 1103,
-	ValidChecksum = 1104,
-	InvalidChecksumRetry = 1105,
-	InvalidChecksumAbort = 1106
+#define SUPPORTED_PROTOCOL_VERSION (1)
+
+enum ClientRequestsCode : uint16_t {
+	RequestCodeRegister = 1100,
+	RequestCodeKeyExchange = 1101,
+	RequestCodeUploadFile = 1103,
+	RequestCodeValidChecksum = 1104,
+	RequestCodeInvalidChecksumRetry = 1105,
+	RequestCodeInvalidChecksumAbort = 1106
 };
 
-enum ServerResponseType : uint16_t {
-	RegisterSuccess = 2100,
-	ExchangeAes = 2102,
-	FileUploaded = 2103,
-	MessageOk = 2104,
-	ServerError = 0
+enum ServerResponseCode : uint16_t {
+	ResponseCodeRegisterSuccess = 2100,
+	ResponseCodeExchangeAes = 2102,
+	ResponseCodeFileUploaded = 2103,
+	ResponseCodeMessageOk = 2104,
+	ResponseCodeServerError = 0
 };
 
 
@@ -34,7 +36,7 @@ enum ServerResponseType : uint16_t {
 struct ClientRequestBase {
 	unsigned char user_id[USER_ID_BYTE_LENGTH];
 	unsigned char version;
-	ClientRequestsType code;
+	ClientRequestsCode code;
 	unsigned int payload_size;
 };
 
@@ -59,10 +61,9 @@ struct CRCValidationResult : ClientRequestBase {
 
 
 
-struct ServerResponseBase {
-	unsigned char user_id[USER_ID_BYTE_LENGTH];
+struct ServerResponseHeader {
 	unsigned char version;
-	ServerResponseType code;
+	ServerResponseCode code;
 	unsigned int payload_size;
 };
 

@@ -156,15 +156,24 @@ def receive_request_part(client: socket, req_type: ClientRequestPart) -> Any:
 
 
 ResponseEncodeMap = {
+    ResponseHeader: "<BHL",
     RegisterSuccessResponse: "<16s",
     KeyExchangeResponse: "<16s",
     FileUploadResponse: "<16s",
 }
 
 
+def getattr_with_autocast(o, name):
+    """ Gets an attribute, and casts enums to their values. """
+    val = getattr(o, name)
+    if issubclass(type(val), Enum):
+        return val.value
+    return val
+
+
 def encode_response_part(obj_to_encode: Any):
     fmt = ResponseEncodeMap[type(obj_to_encode)]
-    vals = [obj_to_encode[f.name] for f in fields(obj_to_encode)]
+    vals = [getattr_with_autocast(obj_to_encode, f.name) for f in fields(obj_to_encode)]
     return struct.pack(fmt, *vals)
 
 

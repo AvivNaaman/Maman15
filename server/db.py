@@ -52,6 +52,8 @@ CREATE TABLE IF NOT EXISTS files (
     """
 
     def __init__(self):
+        self.logger = logging.getLogger("Server.DataAccess")
+
         self.sqlite_conn = self.__connect_sqlite()
         self.__ensure_tables_exist()
 
@@ -61,12 +63,12 @@ CREATE TABLE IF NOT EXISTS files (
         self.__load_data()
 
     def __connect_sqlite(self):
-        logging.info("Connecting to local SQLite database.")
+        self.logger.info("Connecting to local SQLite database.")
         conn = sqlite3.connect(self.LOCAL_DB_FILE_NAME, check_same_thread=False)
         return conn
 
     def __ensure_tables_exist(self):
-        logging.info("Making sure all tables exist.")
+        self.logger.info("Making sure all tables exist.")
         cursor = self.sqlite_conn.cursor()
         cursor.execute(self.CREATE_USERS_SQL)
         cursor.execute(self.CREATE_FILES_SQL)
@@ -101,8 +103,11 @@ CREATE TABLE IF NOT EXISTS files (
 
     def register_user(self, name: str):
         """ Registers a new client by name, and returns the new client ID. """
+
         new_id = uuid.uuid4()
         new_user = User(new_id, name)
+
+        self.logger.debug(f"Adding new user {name} with ID {new_id}.")
 
         cursor = self.sqlite_conn.cursor()
         cursor.execute("INSERT INTO clients (ID, Name, LastSeen) VALUES (?, ?, ?)",
@@ -119,6 +124,8 @@ CREATE TABLE IF NOT EXISTS files (
         # TODO: Prevent updating key of an existing user. Return Error.
         user_to_update.public_key = public_key
         user_to_update.aes_key = aes_key
+
+        self.logger.debug(f"Saving keys for user {user_id}")
 
         cursor = self.sqlite_conn.cursor()
         cursor.execute("UPDATE clients SET PublicKey=?, AESKey=? WHERE ID=?",

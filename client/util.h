@@ -1,32 +1,29 @@
 #pragma once
 
 #include <boost/asio.hpp>
+#include <iostream>
 
 template <typename T>
 union SocketData {
-	unsigned char ch[sizeof(T)];
-	T variable;
+	unsigned char as_buffer[sizeof(T)];
+	T as_original;
 };
 
 template <typename T>
-void read_data_from_socket(SocketData<T>* dest,
-	const boost::asio::ip::tcp::socket& src) {
-	boost::asio::read(src, boost::asio::buffer(dest->ch, sizeof(dest->ch)));
+void read_data_from_socket(T* dest_data,
+	boost::asio::ip::tcp::socket& src) {
+	auto *dest = (SocketData<T>*)dest_data;
+	boost::asio::read(src, boost::asio::buffer(dest->as_buffer, sizeof(dest->as_buffer)));
 }
 
 
 template <typename T>
 void write_data_to_socket(T* source_data,
 	boost::asio::ip::tcp::socket& dest) {
-	SocketData<T>* src = (SocketData<T>*)source_data;
-	boost::asio::write(dest, boost::asio::buffer(src->ch, sizeof(src->ch)));
-}
-
-template <typename T>
-void autofill_request(T* data) {
-	ClientRequestBase* bptr = (ClientRequestBase*)data;
-	bptr->version = 1;
+	auto src = (SocketData<T>*)source_data;
+	boost::asio::write(dest, boost::asio::buffer(src->as_buffer, sizeof(src->as_buffer)));
 }
 
 void parse_uid(const std::string& input, unsigned char* destination);
 
+void write_uid(std::ostream& out_s, unsigned char* source, size_t len);

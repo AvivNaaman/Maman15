@@ -7,7 +7,7 @@ auto TRANSFER_FILE_NAME = "transfer.info";
 class TransferInfo {
 public:
 	std::string host;
-	int port;
+	int port = -1;
 	std::string user_name;
 	std::filesystem::path file_path;
 };
@@ -41,5 +41,7 @@ int main() {
 	c.register_user(tinfo.user_name);
 //	c.exchange_keys();
 //	c.send_file("/Users/avivnaaman/Desktop/cropper.py");
+	std::cout << "Press any key to exit.";
+	std::cin.read(address, 1);
 	return 0;
 }

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -113,10 +113,6 @@
     <ClInclude Include="Client.h" />
     <ClInclude Include="protocol.h" />
     <ClInclude Include="util.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="cmake-build-debug\cmakefiles\3.23.2\CMakeDetermineCompilerABI_C.bin" />
-    <None Include="cmake-build-debug\cmakefiles\3.23.2\CMakeDetermineCompilerABI_CXX.bin" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

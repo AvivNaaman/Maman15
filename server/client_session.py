@@ -24,7 +24,7 @@ class ClientSession(threading.Thread):
             header: RequestHeader = receive_request_part(self.__client, ClientRequestPart.Header)
             header_request = ClientRequestType(header.code)
             # Execute logic by request type
-            self.HANDLERS_MAP[header_request](header)
+            self.HANDLERS_MAP[header_request](self, header)
 
     def register(self, _):
         reg_content: RegisterRequestContent = receive_request_part(self.__client, ClientRequestPart.RegisterContent)
