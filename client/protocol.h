@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 
 #define AES_KEY_LENGTH_BITS (128)
 #define RSA_KEY_LENGTH_BITS (1024)

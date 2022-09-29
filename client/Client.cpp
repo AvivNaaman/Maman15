@@ -21,21 +21,28 @@ Client::Client(const std::string& host, int port) :
 }
 
 
-void Client::load_info_file() {
+bool Client::load_info_file() {
 	std::ifstream info_file(Client::INFO_FILE_NAME);
 
 	if (!info_file.is_open()) {
-		return;
+		return false;
 	}
-
+	// user name
 	std::getline(info_file, this->user_name);
 
 	std::string temp_line;
 
+	// user id
 	info_file >> temp_line;
-	parse_uid(temp_line, this->user_id);
+	Uid::parse(temp_line, this->user_id);
 
+	// private key
 	info_file >> temp_line;
+	// decode & set
+	auto private_key = Base64::decode(temp_line);
+	rsa.setKey(private_key);
+
+	return true;
 }
 
 void Client::save_info_file() {
@@ -47,17 +54,19 @@ void Client::save_info_file() {
 
 	info_file << this->user_name;
 
-	write_uid(info_file, this->user_id, sizeof(this->user_id));
+	Uid::write(info_file, this->user_id, sizeof(this->user_id));
 
-	info_file << this->public_key;
+	info_file << Base64::encode(this->rsa.get_public_key());
 }
 
-void Client::prepare_request(ClientRequestBase& to_prepare, ClientRequestsCode code)
+void Client::prepare_request(ClientRequestBase& to_prepare, ClientRequestsCode code, size_t actual_size)
 {
 	to_prepare.version = SUPPORTED_PROTOCOL_VERSION;
 	to_prepare.code = code;
+	to_prepare.payload_size = actual_size - sizeof(ClientRequestBase);
 	memcpy(to_prepare.user_id, this->user_id, sizeof(this->user_id));
 }
+
 
 void Client::register_user(std::string user_name) {
 	RegisterRequestType request;
@@ -65,11 +74,9 @@ void Client::register_user(std::string user_name) {
 	if (user_name.length() > MAX_NAME_SIZE - 1)
 		throw std::invalid_argument("user_name");
 
-	strcpy(request.user_name, user_name.c_str());
-	request.code = ClientRequestsCode::RequestCodeRegister;
-	request.payload_size = sizeof(request.user_name);
+	strncpy(request.user_name, user_name.c_str(), sizeof(request.user_name));
 
-	prepare_request(request);
+	prepare_request(request, ClientRequestsCode::RequestCodeRegister, sizeof(request));
 	write_data_to_socket(&request, this->socket);
 
 	ServerResponseHeader header;
@@ -91,6 +98,20 @@ void Client::register_user(std::string user_name) {
 void Client::exchange_keys()
 {
 	KeyExchangeRequestType request;
-	prepare_request(request, ClientRequestsCode::RequestCodeKeyExchange);
-	request.code
+	prepare_request(request, ClientRequestsCode::RequestCodeKeyExchange, sizeof(request));
+
+	// generate key pair, send public key
+	rsa.gen_key();
+	strncpy(request.public_key, rsa.get_public_key().c_str(), sizeof(request.public_key));
+	strncpy(request.user_name, rsa.get_public_key().c_str(), sizeof(request.user_name));
+	write_data_to_socket(&request, socket);
+	
+	ServerResponseHeader header;
+	read_data_from_socket(&header, socket);
+	if (header.code != ServerResponseCode::ResponseCodeExchangeAes) {
+		std::cerr << "Invalid response from server. Aborting.";
+		return;
+	}
+
+	save_info_file();
 }

@@ -6,6 +6,7 @@
 #include <boost/asio.hpp>
 #include "util.h"
 #include "protocol.h"
+#include "RSADecryptor.h"
 
 using boost::asio::ip::tcp;
 
@@ -29,8 +30,8 @@ private:
 	/// </summary>
 	u_char user_id[USER_ID_BYTE_LENGTH];
 
-	// public + private + AES keys
-	std::string public_key, private_key, aes_key;
+	// public + private + AES objects
+	RSADecryptor rsa;
 public:
 	static const std::string INFO_FILE_NAME;
 
@@ -66,7 +67,8 @@ private:
 	/// <summary>
 	/// Loads the information file data of an already registered user to the client.
 	/// </summary>
-	void load_info_file();
+	/// <returns>Whether the file read & parsed successfully.</returns>
+	bool load_info_file();
 
 	/// <summary>
 	/// Saves the current client's registered user data to the information file.
@@ -78,6 +80,6 @@ private:
 	/// </summary>
 	/// <param name="to_prepare">The object to prepare</param>
 	/// <param name="code">The request code to send</param>
-	void prepare_request(ClientRequestBase& to_prepare, ClientRequestsCode code);
+	void prepare_request(ClientRequestBase& to_prepare, ClientRequestsCode code, size_t actual_size);
 };
 
