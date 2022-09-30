@@ -41,5 +41,10 @@ public:
 	/// </summary>
 	/// <returns></returns>
 	std::string get_public_key();
+
+	/// <summary>
+	/// Returns the current private key as a string.
+	/// </summary>
+	std::string get_private_key();
 };
 

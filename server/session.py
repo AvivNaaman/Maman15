@@ -42,11 +42,16 @@ class ClientSession(threading.Thread):
         # Gen AES Key
         aes_key = os.urandom(AES_KEY_SIZE_BYTES)
 
+        uid = uuid.UUID(bytes=header.user_id)
         # Save AES Key to database, along with public key
-        self.__db.save_keys(header.user_id, keyx_content.public_key, aes_key)
+        self.__db.save_keys(uid, keyx_content.public_key, aes_key)
 
-        # TODO: Return this encrypted AES Key using the socket.
+        # Encrypt AES Key, and return it.
         encrypted_aes = encrypt_with_rsa(keyx_content.public_key, aes_key)
+        payload = KeyExchangeResponse(header.user_id, encrypted_aes)
+        response = get_response(ServerResponseType.ExchangeAes, payload, len(encrypted_aes))
+
+        self.__client.send(response)
 
     def upload_file(self, header):
         upload_content: FileUploadContent = receive_request_part(self.__client,

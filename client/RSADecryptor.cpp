@@ -12,6 +12,7 @@ void RSADecryptor::setKey(std::string key)
 void RSADecryptor::gen_key()
 {
 	_privateKey.Initialize(_rng, RSA_KEY_LENGTH_BITS);
+	_initialized = true;
 }
 
 std::string RSADecryptor::decrypt(const char* cipher, unsigned int length)
@@ -28,5 +29,13 @@ std::string RSADecryptor::get_public_key()
 	std::string key;
 	CryptoPP::StringSink ss(key);
 	publicKey.Save(ss);
+	return key;
+}
+
+std::string RSADecryptor::get_private_key()
+{
+	std::string key;
+	CryptoPP::StringSink ss(key);
+	_privateKey.Save(ss);
 	return key;
 }

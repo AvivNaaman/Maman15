@@ -34,6 +34,7 @@ bool Client::load_info_file() {
 
 	// user id
 	info_file >> temp_line;
+	if (temp_line.empty()) return false;
 	Uid::parse(temp_line, this->user_id);
 
 	// private key
@@ -52,11 +53,11 @@ void Client::save_info_file() {
 		return;
 	}
 
-	info_file << this->user_name;
+	info_file << this->user_name << std::endl;
 
 	Uid::write(info_file, this->user_id, sizeof(this->user_id));
 
-	info_file << Base64::encode(this->rsa.get_public_key());
+	info_file << std::endl << Base64::encode(this->rsa.get_private_key()) << std::endl;
 }
 
 void Client::prepare_request(ClientRequestBase& to_prepare, ClientRequestsCode code, size_t actual_size)
@@ -74,7 +75,7 @@ void Client::register_user(std::string user_name) {
 	if (user_name.length() > MAX_NAME_SIZE - 1)
 		throw std::invalid_argument("user_name");
 
-	strncpy(request.user_name, user_name.c_str(), sizeof(request.user_name));
+	memcpy(request.user_name, user_name.c_str(), sizeof(request.user_name));
 
 	prepare_request(request, ClientRequestsCode::RequestCodeRegister, sizeof(request));
 	write_data_to_socket(&request, this->socket);
@@ -93,6 +94,8 @@ void Client::register_user(std::string user_name) {
 	memcpy(this->user_id, payload.user_id, sizeof(this->user_id));
 
 	std::cout << "Registered client successfully!";
+
+	this->user_name = user_name;
 }
 
 void Client::exchange_keys()
@@ -102,8 +105,8 @@ void Client::exchange_keys()
 
 	// generate key pair, send public key
 	rsa.gen_key();
-	strncpy(request.public_key, rsa.get_public_key().c_str(), sizeof(request.public_key));
-	strncpy(request.user_name, rsa.get_public_key().c_str(), sizeof(request.user_name));
+	memcpy(request.public_key, rsa.get_public_key().c_str(), sizeof(request.public_key));
+	memcpy(request.user_name, user_name.c_str(), sizeof(request.user_name));
 	write_data_to_socket(&request, socket);
 	
 	ServerResponseHeader header;

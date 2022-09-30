@@ -7,6 +7,13 @@ from typing import Any
 # ASCII with range(256) to support garbage.
 TEXT_ENCODING = 'charmap'
 
+USER_ID_LENGTH_BYTES = 16
+AES_KEY_SIZE_BYTES = 16
+MAX_USERNAME_SIZE = 255
+PUBLIC_KEY_SIZE_BYTES = 160
+CHECKSUM_SIZE_BYTES = 16
+CURRENT_VERSION_NUMBER = 1
+
 
 class ClientRequestType(Enum):
     Register = 1100
@@ -31,18 +38,18 @@ class AutoParseDataClassStrings:
 
 
 # Little endian: unsigned short | 16-char string
-REQUEST_HEADER_FMT = "<16sBHL"
+REQUEST_HEADER_FMT = f"<{USER_ID_LENGTH_BYTES}sBHL"
 
 
 @dataclass
 class RequestHeader(AutoParseDataClassStrings):
-    user_id: str
+    user_id: bytes
     version: int
     code: ClientRequestType
     payload_size: int
 
 
-REQUEST_REGISTER_FMT = "<255s"
+REQUEST_REGISTER_FMT = f"<{MAX_USERNAME_SIZE}s"
 
 
 @dataclass
@@ -50,7 +57,7 @@ class RegisterRequestContent(AutoParseDataClassStrings):
     name: str
 
 
-REQUEST_KEY_EXCHANGE_FORMAT = "<255s160s"
+REQUEST_KEY_EXCHANGE_FORMAT = f"<{MAX_USERNAME_SIZE}s{PUBLIC_KEY_SIZE_BYTES}s"
 
 
 @dataclass
@@ -59,7 +66,7 @@ class KeyExchangeContent(AutoParseDataClassStrings):
     public_key: bytes
 
 
-REQUEST_UPLOAD_FORMAT = "<255sQ"
+REQUEST_UPLOAD_FORMAT = f"<{MAX_USERNAME_SIZE}sQ"
 
 
 @dataclass
@@ -68,7 +75,7 @@ class FileUploadContent(AutoParseDataClassStrings):
     file_size: int
 
 
-REQUEST_VERIFY_CHECKSUM_FMT = "<255s"
+REQUEST_VERIFY_CHECKSUM_FMT = f"<{MAX_USERNAME_SIZE}s"
 
 
 @dataclass
@@ -92,12 +99,11 @@ RequestParseInfoMap = {
     ClientRequestPart.VerifyChecksumContent: (REQUEST_VERIFY_CHECKSUM_FMT, VerifyChecksumContent),
 }
 
-AES_KEY_SIZE_BYTES = 10
 
 
 @dataclass
 class ResponseHeader:
-    version: int = 1
+    version: int = CURRENT_VERSION_NUMBER
     code: ServerResponseType = ServerResponseType.MessageOk
     payload_size: int = 0
 
@@ -157,9 +163,9 @@ def receive_request_part(client: socket, req_type: ClientRequestPart) -> Any:
 
 ResponseEncodeMap = {
     ResponseHeader: "<BHL",
-    RegisterSuccessResponse: "<16s",
-    KeyExchangeResponse: "<16s",
-    FileUploadResponse: "<16s",
+    RegisterSuccessResponse: f"<{USER_ID_LENGTH_BYTES}s",
+    KeyExchangeResponse: f"<{USER_ID_LENGTH_BYTES}s{{0}}s",
+    FileUploadResponse: f"<{CHECKSUM_SIZE_BYTES}s",
 }
 
 
@@ -171,15 +177,21 @@ def getattr_with_autocast(o, name):
     return val
 
 
-def encode_response_part(obj_to_encode: Any):
+def encode_response_part(obj_to_encode: Any, *format_lengths):
     fmt = ResponseEncodeMap[type(obj_to_encode)]
+    fmt = fmt.format(*format_lengths)
     vals = [getattr_with_autocast(obj_to_encode, f.name) for f in fields(obj_to_encode)]
     return struct.pack(fmt, *vals)
 
 
-def get_response(code: ServerResponseType, payload) -> bytes:
-    # TODO: Support variable-size response in fields.
-    payload_bytes = encode_response_part(payload)
+def get_response(code: ServerResponseType, payload, *format_lengths) -> bytes:
+    """
+    Returns a bytes response of the server to a client, for a certain response part.
+    :param code: The response type code
+    :param payload: The payload data
+    :param format_lengths: A collection of integers, specifying variable-lengths for packing the payload data.
+    """
+    payload_bytes = encode_response_part(payload, *format_lengths)
 
     header = ResponseHeader(code=code, payload_size=len(payload_bytes))
     header_bytes = encode_response_part(header)

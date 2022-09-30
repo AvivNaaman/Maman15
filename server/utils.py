@@ -1,6 +1,6 @@
 import zlib
 from socket import socket
-from Crypto.Cipher import AES
+from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.PublicKey import RSA
 
 
@@ -35,4 +35,4 @@ def socket_to_local_file(src: socket, file_name: str, filesize: int, aes_key: by
 def encrypt_with_rsa(publickey, short_data):
     """ Encrypts some short data using RSA by the provided public key. """
     loaded_key = RSA.importKey(publickey)
-    return loaded_key.encrypt(short_data)
+    return PKCS1_OAEP.new(loaded_key).encrypt(short_data)
