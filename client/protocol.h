@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 
-#define AES_KEY_LENGTH_BITS (128)
+#define AES_KEY_LENGTH_BYTES (16)
 #define RSA_KEY_LENGTH_BITS (1024)
 
 #define PUBLIC_KEY_SIZE_BYTES (160)
@@ -51,13 +51,14 @@ struct KeyExchangeRequestType : ClientRequestBase {
 };
 
 struct SendFileRequestType : ClientRequestBase {
-	unsigned char user_id[USER_ID_BYTE_LENGTH];
+	unsigned char client_id[USER_ID_BYTE_LENGTH];
 	unsigned int content_size;
 	char file_name[MAX_FILENAME_SIZE];
 };
 
-struct CRCValidationResult : ClientRequestBase {
-	// there are no fields. preserved for future use & compatibillity.
+struct ChecksumStatusRequest : ClientRequestBase {
+	unsigned char client_id[USER_ID_BYTE_LENGTH];
+	char file_name[MAX_FILENAME_SIZE];
 };
 
 
@@ -69,16 +70,16 @@ struct ServerResponseHeader {
 };
 
 struct RegisterSuccess {
-	unsigned char user_id[USER_ID_BYTE_LENGTH];
+	unsigned char client_id[USER_ID_BYTE_LENGTH];
 };
 
+
 struct KeyExchangeSuccess {
-	unsigned char user_id[USER_ID_BYTE_LENGTH];
-	unsigned char EncryptedAESKey[EXCHANGED_AES_KEY_SIZE_LIMIT];
+	unsigned char client_id[USER_ID_BYTE_LENGTH];
 };
 
 struct FileUploadSuccess {
-	unsigned char user_id[USER_ID_BYTE_LENGTH];
+	unsigned char client_id[USER_ID_BYTE_LENGTH];
 	unsigned int content_size;
 	char file_name[MAX_FILENAME_SIZE];
 	unsigned int checksum;

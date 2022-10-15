@@ -3,7 +3,7 @@
 #include "util.h"
 #include <base64.h>
 
-unsigned char parse_hex(char digit) {
+inline unsigned char parse_hex(char digit) {
 	if ('A' <= digit && digit <= 'F') {
 		return digit - 'A' + 10;
 	}
@@ -12,7 +12,7 @@ unsigned char parse_hex(char digit) {
 	}
 }
 
-unsigned char parse_hex_byte(const char* hexdigits) {
+inline unsigned char parse_hex_byte(const char* hexdigits) {
 	char first = hexdigits[0];
 	char second = hexdigits[1];
 	return (parse_hex(first) << 4) + parse_hex(second);
@@ -26,7 +26,7 @@ void Uid::parse(const std::string& input, unsigned char* destination) {
 
 void Uid::write(std::ostream &out_s, unsigned char* source, size_t len) {
 	for (int i = 0; i < len; ++i)
-		out_s << std::hex << std::setfill('0') << std::setw(2) << source[i];
+		out_s << std::hex << std::setw(2) << std::setfill('0') << (int) static_cast <unsigned char>(source[i]);
 }
 
 

@@ -10,12 +10,19 @@ union SocketData {
 };
 
 template <typename T>
-void read_data_from_socket(T* dest_data,
+void read_static_data_from_socket(T* dest_data,
 	boost::asio::ip::tcp::socket& src) {
 	auto* dest = (SocketData<T>*)dest_data;
 	boost::asio::read(src, boost::asio::buffer(dest->as_buffer, sizeof(dest->as_buffer)));
 }
 
+template <typename T>
+void read_dynamic_data_from_socket(T* dest_data,
+	boost::asio::ip::tcp::socket& src,
+	size_t read_count) {
+	unsigned char *temp = (unsigned char*)dest_data;
+	boost::asio::read(src, boost::asio::buffer(temp, read_count));
+}
 
 template <typename T>
 void write_data_to_socket(T* source_data,

@@ -109,6 +109,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Client.cpp" />
+    <ClCompile Include="CRC.cpp" />
     <ClCompile Include="EncryptedFileSender.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="RSADecryptor.cpp" />
@@ -116,13 +117,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Client.h" />
+    <ClInclude Include="CRC.h" />
     <ClInclude Include="EncryptedFileSender.h" />
     <ClInclude Include="protocol.h" />
     <ClInclude Include="RSADecryptor.h" />
     <ClInclude Include="util.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="me.info" />
     <None Include="transfer.info" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

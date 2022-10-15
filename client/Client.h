@@ -7,6 +7,7 @@
 #include "util.h"
 #include "protocol.h"
 #include "RSADecryptor.h"
+#include "EncryptedFileSender.h"
 
 using boost::asio::ip::tcp;
 
@@ -19,6 +20,7 @@ private:
 	boost::asio::io_context client_io_ctx;
 	tcp::resolver srv_resolver;
 	tcp::socket socket;
+	EncryptedFileSender file_sender;
 
 	/// <summary>
 	/// Current user's user name.
@@ -78,8 +80,14 @@ private:
 	/// <summary>
 	/// Prepares a request object to send.
 	/// </summary>
-	/// <param name="to_prepare">The object to prepare</param>
 	/// <param name="code">The request code to send</param>
-	void prepare_request(ClientRequestBase& to_prepare, ClientRequestsCode code, size_t actual_size);
+	template <class T>
+	inline T get_request(ClientRequestsCode code);
+
+	/// <summary>
+	/// Fetches the server's response from the socket, and returns the header.
+	/// </summary>
+	/// <returns>The header's value</returns>
+	inline ServerResponseHeader get_header();
 };
 

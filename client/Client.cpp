@@ -3,6 +3,7 @@
 #include "protocol.h"
 #include "util.h"
 #include <iostream>
+#include "CRC.h"
 
 using boost::asio::ip::tcp;
 
@@ -11,7 +12,8 @@ const std::string Client::INFO_FILE_NAME = "me.info";
 
 Client::Client(const std::string& host, int port) :
 	srv_resolver(client_io_ctx),
-	socket(client_io_ctx) {
+	socket(client_io_ctx),
+	file_sender() {
 	// connect socket
 	auto endpoint = srv_resolver.resolve(host, std::to_string(port));
 	boost::asio::connect(socket, endpoint);
@@ -60,38 +62,46 @@ void Client::save_info_file() {
 	info_file << std::endl << Base64::encode(this->rsa.get_private_key()) << std::endl;
 }
 
-void Client::prepare_request(ClientRequestBase& to_prepare, ClientRequestsCode code, size_t actual_size)
+template <class T>
+inline T Client::get_request(ClientRequestsCode code)
 {
+	static_assert(std::is_base_of<ClientRequestBase, T>::value, "T must inherit from ClientRequestBase!");
+	T to_prepare;
 	to_prepare.version = SUPPORTED_PROTOCOL_VERSION;
 	to_prepare.code = code;
-	to_prepare.payload_size = actual_size - sizeof(ClientRequestBase);
+	to_prepare.payload_size = sizeof(T) - sizeof(ClientRequestBase);
 	memcpy(to_prepare.user_id, this->user_id, sizeof(this->user_id));
+	return to_prepare;
 }
 
+inline ServerResponseHeader Client::get_header() {
+	ServerResponseHeader header;
+	read_static_data_from_socket(&header, this->socket);
+
+	/*if (header.code != ServerResponseCode::ResponseCodeRegisterSuccess) {
+		std::cerr << "Invalid response from server! Aborting.";
+		throw std::exception("Unexpected response code!");
+	}*/
+
+	return header;
+}
 
 void Client::register_user(std::string user_name) {
-	RegisterRequestType request;
+
 
 	if (user_name.length() > MAX_NAME_SIZE - 1)
 		throw std::invalid_argument("user_name");
 
+	auto request = get_request<RegisterRequestType>(ClientRequestsCode::RequestCodeRegister);
 	memcpy(request.user_name, user_name.c_str(), sizeof(request.user_name));
-
-	prepare_request(request, ClientRequestsCode::RequestCodeRegister, sizeof(request));
 	write_data_to_socket(&request, this->socket);
 
-	ServerResponseHeader header;
-	read_data_from_socket(&header, this->socket);
-
-	if (header.code != ServerResponseCode::ResponseCodeRegisterSuccess) {
-		std::cerr << "Invalid response from server. Aborting.";
-		return;
-	}
+	auto header = get_header();
 
 	RegisterSuccess payload;
-	read_data_from_socket(&payload, this->socket);
+	read_static_data_from_socket(&payload, this->socket);
 
-	memcpy(this->user_id, payload.user_id, sizeof(this->user_id));
+	memcpy(this->user_id, payload.client_id, sizeof(this->user_id));
 
 	std::cout << "Registered client successfully!";
 
@@ -100,21 +110,67 @@ void Client::register_user(std::string user_name) {
 
 void Client::exchange_keys()
 {
-	KeyExchangeRequestType request;
-	prepare_request(request, ClientRequestsCode::RequestCodeKeyExchange, sizeof(request));
+	auto request = get_request<KeyExchangeRequestType>(ClientRequestsCode::RequestCodeKeyExchange);
 
 	// generate key pair, send public key
 	rsa.gen_key();
 	memcpy(request.public_key, rsa.get_public_key().c_str(), sizeof(request.public_key));
 	memcpy(request.user_name, user_name.c_str(), sizeof(request.user_name));
 	write_data_to_socket(&request, socket);
-	
-	ServerResponseHeader header;
-	read_data_from_socket(&header, socket);
-	if (header.code != ServerResponseCode::ResponseCodeExchangeAes) {
-		std::cerr << "Invalid response from server. Aborting.";
-		return;
-	}
 
+	auto header = get_header();
+
+	KeyExchangeSuccess payload;
+	read_static_data_from_socket(&payload, this->socket);
+
+	auto key_exp_size = header.payload_size - sizeof(KeyExchangeSuccess);
+	auto key_dest = new char[key_exp_size];
+	read_dynamic_data_from_socket(key_dest, socket, key_exp_size);
+	std::string aes_key = rsa.decrypt(std::string(key_dest, key_exp_size));
+
+	file_sender.set_key(aes_key);
 	save_info_file();
+}
+
+#define SEND_FILE_RETRY_COUNT (3)
+
+void Client::send_file(std::filesystem::path file_path)
+{
+	auto file_crc = CRC().calculate(file_path.string());
+	int tries_left = SEND_FILE_RETRY_COUNT;
+	auto file_name = file_path.filename().string();
+	bool upload_verified = false;
+
+	while (tries_left > 0 && !upload_verified) {
+		tries_left--;
+
+		// send the file
+		auto request = get_request<SendFileRequestType>(ClientRequestsCode::RequestCodeUploadFile);
+		strcpy_s(request.file_name, sizeof(request.file_name), file_name.c_str());
+		memcpy_s(request.client_id, sizeof(request.user_id), this->user_id, sizeof(this->user_id));
+		request.content_size = file_sender.calculate_encrypted_size(file_size(file_path));
+		write_data_to_socket(&request, socket);
+		file_sender.send_local_file(file_path.string(), socket);
+
+		// fetch response
+		auto header = get_header();
+		FileUploadSuccess payload;
+		read_static_data_from_socket(&payload, this->socket);
+
+		// validate checksum
+		ClientRequestsCode c = (tries_left > 0) ? ClientRequestsCode::RequestCodeInvalidChecksumRetry : ClientRequestsCode::RequestCodeInvalidChecksumAbort;
+		if (payload.checksum == file_crc) {
+			upload_verified = true;
+			c = ClientRequestsCode::RequestCodeValidChecksum;
+		}
+
+		// Update server with the checksum validation result
+		auto crequest = get_request<ChecksumStatusRequest>(ClientRequestsCode::RequestCodeValidChecksum);
+		strcpy_s(crequest.file_name, sizeof(crequest.file_name), file_name.c_str());
+		memcpy(crequest.client_id, this->user_id, sizeof(this->user_id));
+		write_data_to_socket(&crequest, socket);
+
+		// wait for server response before continue
+		get_header();
+	}
 }

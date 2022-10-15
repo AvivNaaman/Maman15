@@ -4,7 +4,6 @@ import uuid
 from socket import socket
 
 import utils
-from utils import crc, encrypt_with_rsa
 from db import Database
 from protocol import *
 
@@ -26,7 +25,7 @@ class ClientSession(threading.Thread):
             # Execute logic by request type
             self.HANDLERS_MAP[header_request](self, header)
 
-    def register(self, _):
+    def register(self, header: RequestHeader):
         reg_content: RegisterRequestContent = receive_request_part(self.__client, ClientRequestPart.RegisterContent)
 
         new_id = self.__db.register_user(reg_content.name)
@@ -36,7 +35,7 @@ class ClientSession(threading.Thread):
 
         self.__client.send(response)
 
-    def key_exchange(self, header):
+    def key_exchange(self, header: RequestHeader):
         keyx_content: KeyExchangeContent = receive_request_part(self.__client, ClientRequestPart.KeyExchangeContent)
 
         # Gen AES Key
@@ -47,36 +46,52 @@ class ClientSession(threading.Thread):
         self.__db.save_keys(uid, keyx_content.public_key, aes_key)
 
         # Encrypt AES Key, and return it.
-        encrypted_aes = encrypt_with_rsa(keyx_content.public_key, aes_key)
+        encrypted_aes = utils.encrypt_with_rsa(keyx_content.public_key, aes_key)
         payload = KeyExchangeResponse(header.user_id, encrypted_aes)
         response = get_response(ServerResponseType.ExchangeAes, payload, len(encrypted_aes))
 
         self.__client.send(response)
 
-    def upload_file(self, header):
+    def upload_file(self, header: RequestHeader):
         upload_content: FileUploadContent = receive_request_part(self.__client,
                                                                  ClientRequestPart.UploadFileInfoContent)
         current_user_id = header.user_id
         aes_key = self.__db.get_aes_for_user(uuid.UUID(bytes=current_user_id))
+        u = self.__db.users[uuid.UUID(bytes=current_user_id)]
 
-        # Generate file name
-        dest_file_name = current_user_id + '.dat'
+        # Generate file name & create dir
+        try:
+            os.mkdir(u.name)
+        except FileExistsError:
+            pass
+
+        dest_file_name = os.path.join(u.name, upload_content.file_name)
         utils.socket_to_local_file(self.__client, dest_file_name, upload_content.file_size, aes_key)
+        self.__db.add_file(current_user_id, upload_content.file_name, dest_file_name)
 
-        # TODO: Return CRC
-        file_crc = crc(dest_file_name)
+        # Return CRC
+        file_crc = utils.crc32().calculate(dest_file_name)
+        payload = FileUploadResponse(current_user_id, upload_content.file_size, upload_content.file_name, file_crc)
+        response = get_response(ServerResponseType.ExchangeAes, payload)
 
-    def verify_checksum(self, header):
-        # TODO: Do we have a file for each user? If so, use the header to query.
-        # TODO: Otherwise, save it in the upload_file method, and use it in the current session.
-        self.__db.verify_file(header.user_id)
+        self.__client.send(response)
 
-        # TODO: Return OK
-        pass
+    def verify_checksum(self, header: RequestHeader):
+        self.__db.verify_file(uuid.UUID(bytes=header.user_id))
+        self.default_response()
+
+    def default_response(self, *args, **kwargs):
+        self.__client.send(get_response(ServerResponseType.MessageOk))
+
+    def invalid_checksum_abort(self, header: RequestHeader):
+        self.__db.remove_file(uuid.UUID(bytes=header.user_id))
+        self.default_response()
 
     HANDLERS_MAP = {
         ClientRequestType.Register: register,
         ClientRequestType.KeyExchange: key_exchange,
         ClientRequestType.UploadFile: upload_file,
-        ClientRequestType.ValidChecksum: verify_checksum
+        ClientRequestType.ValidChecksum: verify_checksum,
+        ClientRequestType.InvalidChecksumRetry: default_response,
+        ClientRequestType.InvalidChecksumAbort: invalid_checksum_abort
     }

@@ -32,9 +32,8 @@ public:
 	/// Decrypts a byte sequence of size, using the private key.
 	/// </summary>
 	/// <param name="cipher">The encrypted byte sequence.</param>
-	/// <param name="length">The sequence length.</param>
 	/// <returns>A string consists of the decrypted data.</returns>
-	std::string decrypt(const char* cipher, unsigned int length);
+	std::string decrypt(std::string cipher);
 
 	/// <summary>
 	/// Retruns the public key, associated with the current private key.

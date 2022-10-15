@@ -87,9 +87,9 @@ CREATE TABLE IF NOT EXISTS files (
             client_id = uuid.UUID(bytes=client_row[0])
             self.users[client_id] = User(client_id, *client_row[1:])
 
-    def add_file(self, user_id: uuid, file_name: str, file_path: Path):
-        file_entry = File(user_id, file_name, str(file_path.absolute()))
-
+    def add_file(self, user_id: uuid, file_name: str, file_path: str):
+        file_entry = File(user_id, file_name, str(Path(file_path).absolute()))
+        self.files[user_id] = file_entry
         cursor = self.sqlite_conn.cursor()
         cursor.execute("INSERT INTO files (ID, FileName, PathName, Verified) VALUES (?, ?, ?, ?)",
                        [user_id, file_entry.file_name, file_entry.path_name, file_entry.verified])
@@ -133,7 +133,14 @@ CREATE TABLE IF NOT EXISTS files (
         self.sqlite_conn.commit()
 
     def get_aes_for_user(self, user_id: uuid) -> bytes:
-        return self.users[user_id].public_key
+        return self.users[user_id].aes_key
 
     def __login_user(self):
         pass
+
+    def remove_file(self, user_id: uuid):
+        self.files.pop(user_id)
+        cursor = self.sqlite_conn.cursor()
+        cursor.execute("DELETE from files WHERE ID=?",
+                       [user_to_update.id.bytes])
+        self.sqlite_conn.commit()

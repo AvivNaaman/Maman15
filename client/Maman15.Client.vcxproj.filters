@@ -30,6 +30,9 @@
     <ClCompile Include="EncryptedFileSender.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CRC.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Client.h">
@@ -47,12 +50,12 @@
     <ClInclude Include="EncryptedFileSender.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CRC.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="transfer.info">
-      <Filter>Resource Files</Filter>
-    </None>
-    <None Include="me.info">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>

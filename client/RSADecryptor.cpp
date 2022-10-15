@@ -15,7 +15,7 @@ void RSADecryptor::gen_key()
 	_initialized = true;
 }
 
-std::string RSADecryptor::decrypt(const char* cipher, unsigned int length)
+std::string RSADecryptor::decrypt(std::string cipher)
 {
 	std::string decrypted;
 	CryptoPP::RSAES_OAEP_SHA_Decryptor d(_privateKey);

@@ -35,12 +35,13 @@ TransferInfo get_transfer_information() {
 }
 
 int main() {
+	Uid::write(std::cout, (UCHAR*)"ABCDEF", 6);
 	auto tinfo = get_transfer_information();
 	char address[] = "localhost";
 	Client c(tinfo.host, tinfo.port);
 	c.register_user(tinfo.user_name);
 	c.exchange_keys();
-//	c.send_file("/Users/avivnaaman/Desktop/cropper.py");
+	c.send_file(tinfo.file_path);
 	std::cout << "Press any key to exit.";
 	std::cin.read(address, 1);
 	return 0;
