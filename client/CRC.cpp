@@ -90,6 +90,7 @@ uint32_t CRC::digest() {
 
 uint32_t CRC::calculate(std::string filePath)
 {
+	crc = nchar = 0;
 	std::ifstream in_file(filePath, std::ios::binary);
 	char* buf = new char[4098];
 	uint32_t extracted = 0;

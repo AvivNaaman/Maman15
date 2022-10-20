@@ -1,3 +1,4 @@
+import logging
 import os
 import threading
 import uuid
@@ -15,18 +16,31 @@ class ClientSession(threading.Thread):
         super().__init__(daemon=True)
         self.__client = client_socket
         self.__db = database
+        self.__logger = logging.getLogger("ClientSession")
 
     def run(self):
-        # Until connection is closed, handle requests
-        while True:
-            # Get Header
-            header: RequestHeader = receive_request_part(self.__client, ClientRequestPart.Header)
-            header_request = ClientRequestType(header.code)
-            # Execute logic by request type
-            self.HANDLERS_MAP[header_request](self, header)
+        try:
+            # Until connection is closed, handle requests
+            while True:
+                # Get Header
+                header: RequestHeader = receive_request_part(self.__client, ClientRequestPart.Header)
+                header_request = ClientRequestType(header.code)
+                self.__db.set_last_seen(header.user_id)
+                # Execute logic by request type
+                self.HANDLERS_MAP[header_request](self, header)
+        except IOError:
+            pass
+        except Exception as ex:
+            self.__logger.error("Error raised while processing client!")
+            raise ex
 
     def register(self, header: RequestHeader):
         reg_content: RegisterRequestContent = receive_request_part(self.__client, ClientRequestPart.RegisterContent)
+
+        if self.__db.user_exists(reg_content.name):
+            self.__client.send(get_response(ServerResponseType.RegistrationFailed))
+            self.__logger.debug(f"Failed registration of duplicated user name {reg_content.name}")
+            return
 
         new_id = self.__db.register_user(reg_content.name)
 
@@ -55,9 +69,9 @@ class ClientSession(threading.Thread):
     def upload_file(self, header: RequestHeader):
         upload_content: FileUploadContent = receive_request_part(self.__client,
                                                                  ClientRequestPart.UploadFileInfoContent)
-        current_user_id = header.user_id
-        aes_key = self.__db.get_aes_for_user(uuid.UUID(bytes=current_user_id))
-        u = self.__db.users[uuid.UUID(bytes=current_user_id)]
+        current_user_id = uuid.UUID(bytes=header.user_id)
+        aes_key = self.__db.get_aes_for_user(current_user_id)
+        u = self.__db.users[current_user_id]
 
         # Generate file name & create dir
         try:
@@ -71,27 +85,27 @@ class ClientSession(threading.Thread):
 
         # Return CRC
         file_crc = utils.crc32().calculate(dest_file_name)
-        payload = FileUploadResponse(current_user_id, upload_content.file_size, upload_content.file_name, file_crc)
+        payload = FileUploadResponse(current_user_id.bytes, upload_content.file_size, upload_content.file_name, file_crc)
         response = get_response(ServerResponseType.ExchangeAes, payload)
 
         self.__client.send(response)
 
-    def verify_checksum(self, header: RequestHeader):
-        self.__db.verify_file(uuid.UUID(bytes=header.user_id))
+    def checksum_status(self, header: RequestHeader):
+        receive_request_part(self.__client, ClientRequestPart.VerifyChecksumContent)
+        if header.code == ClientRequestType.ValidChecksum:
+            self.__db.verify_file(uuid.UUID(bytes=header.user_id))
+        elif header.code == ClientRequestType.InvalidChecksumAbort:
+            self.__db.remove_file(uuid.UUID(bytes=header.user_id))
         self.default_response()
 
     def default_response(self, *args, **kwargs):
         self.__client.send(get_response(ServerResponseType.MessageOk))
 
-    def invalid_checksum_abort(self, header: RequestHeader):
-        self.__db.remove_file(uuid.UUID(bytes=header.user_id))
-        self.default_response()
-
     HANDLERS_MAP = {
         ClientRequestType.Register: register,
         ClientRequestType.KeyExchange: key_exchange,
         ClientRequestType.UploadFile: upload_file,
-        ClientRequestType.ValidChecksum: verify_checksum,
+        ClientRequestType.ValidChecksum: checksum_status,
         ClientRequestType.InvalidChecksumRetry: default_response,
-        ClientRequestType.InvalidChecksumAbort: invalid_checksum_abort
+        ClientRequestType.InvalidChecksumAbort: checksum_status
     }

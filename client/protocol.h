@@ -1,3 +1,7 @@
+/*
+This file contains protocol specific defintitions such as codes, sizes and data types.
+*/
+
 #pragma once
 #include <cstdint>
 
@@ -5,14 +9,17 @@
 #define RSA_KEY_LENGTH_BITS (1024)
 
 #define PUBLIC_KEY_SIZE_BYTES (160)
-#define USER_ID_BYTE_LENGTH (16)
-#define MAX_NAME_SIZE (255)
-#define PUBLICKEY_SEND_SIZE (160) // TODO: Check automatic formula option.
+#define USER_ID_SIZE_BYTES (16)
+#define MAX_USER_NAME_LENGTH (255)
+#define PUBLIC_KEY_EXPORTED_SIZE (160) // TODO: Check automatic formula option.
 #define MAX_FILENAME_SIZE (255)
 #define EXCHANGED_AES_KEY_SIZE_LIMIT (512)
 
-#define SUPPORTED_PROTOCOL_VERSION (1)
+#define PROTOCOL_VERSION (3)
 
+/// <summary>
+/// The codes for each client request.
+/// </summary>
 enum ClientRequestsCode : uint16_t {
 	RequestCodeRegister = 1100,
 	RequestCodeKeyExchange = 1101,
@@ -22,6 +29,9 @@ enum ClientRequestsCode : uint16_t {
 	RequestCodeInvalidChecksumAbort = 1106
 };
 
+/// <summary>
+/// The codes for each server response.
+/// </summary>
 enum ServerResponseCode : uint16_t {
 	ResponseCodeRegisterSuccess = 2100,
 	ResponseCodeExchangeAes = 2102,
@@ -34,35 +44,36 @@ enum ServerResponseCode : uint16_t {
 
 #pragma pack(push, 1)
 
+/* Requests Data */
 struct ClientRequestBase {
-	unsigned char user_id[USER_ID_BYTE_LENGTH];
+	unsigned char header_user_id[USER_ID_SIZE_BYTES];
 	unsigned char version;
 	ClientRequestsCode code;
 	unsigned int payload_size;
 };
 
 struct RegisterRequestType : ClientRequestBase {
-	char user_name[MAX_NAME_SIZE];
+	char user_name[MAX_USER_NAME_LENGTH];
 };
 
 struct KeyExchangeRequestType : ClientRequestBase {
-	char user_name[MAX_NAME_SIZE];
+	char user_name[MAX_USER_NAME_LENGTH];
 	char public_key[PUBLIC_KEY_SIZE_BYTES];
 };
 
 struct SendFileRequestType : ClientRequestBase {
-	unsigned char client_id[USER_ID_BYTE_LENGTH];
+	unsigned char client_id[USER_ID_SIZE_BYTES];
 	unsigned int content_size;
 	char file_name[MAX_FILENAME_SIZE];
 };
 
 struct ChecksumStatusRequest : ClientRequestBase {
-	unsigned char client_id[USER_ID_BYTE_LENGTH];
+	unsigned char client_id[USER_ID_SIZE_BYTES];
 	char file_name[MAX_FILENAME_SIZE];
 };
 
 
-
+/* Responses Data */
 struct ServerResponseHeader {
 	unsigned char version;
 	ServerResponseCode code;
@@ -70,16 +81,16 @@ struct ServerResponseHeader {
 };
 
 struct RegisterSuccess {
-	unsigned char client_id[USER_ID_BYTE_LENGTH];
+	unsigned char client_id[USER_ID_SIZE_BYTES];
 };
 
 
 struct KeyExchangeSuccess {
-	unsigned char client_id[USER_ID_BYTE_LENGTH];
+	unsigned char client_id[USER_ID_SIZE_BYTES];
 };
 
 struct FileUploadSuccess {
-	unsigned char client_id[USER_ID_BYTE_LENGTH];
+	unsigned char client_id[USER_ID_SIZE_BYTES];
 	unsigned int content_size;
 	char file_name[MAX_FILENAME_SIZE];
 	unsigned int checksum;

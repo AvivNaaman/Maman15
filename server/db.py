@@ -1,7 +1,7 @@
 import sqlite3
 import logging
 import time
-import uuid
+from uuid import UUID, uuid4
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional
@@ -9,7 +9,7 @@ from typing import Dict, Optional
 
 @dataclass
 class User:
-    id: uuid.UUID
+    id: UUID
     name: str
     public_key: Optional[bytes] = None
     last_seen: float = time.time()
@@ -18,7 +18,7 @@ class User:
 
 @dataclass
 class File:
-    id: uuid.UUID
+    id: UUID
     file_name: str
     path_name: str
     verified: bool = False
@@ -57,8 +57,8 @@ CREATE TABLE IF NOT EXISTS files (
         self.sqlite_conn = self.__connect_sqlite()
         self.__ensure_tables_exist()
 
-        self.users: Dict[uuid.UUID, User] = {}
-        self.files: Dict[uuid.UUID, File] = {}
+        self.users: Dict[UUID, User] = {}
+        self.files: Dict[UUID, File] = {}
 
         self.__load_data()
 
@@ -80,31 +80,33 @@ CREATE TABLE IF NOT EXISTS files (
         all_users = cursor.execute("SELECT * FROM clients").fetchall()
 
         for file_row in all_files:
-            file_id = uuid.UUID(bytes=file_row[0])
+            file_id = UUID(bytes=file_row[0])
             self.files[file_id] = File(file_id, *file_row[1:])
 
         for client_row in all_users:
-            client_id = uuid.UUID(bytes=client_row[0])
+            client_id = UUID(bytes=client_row[0])
             self.users[client_id] = User(client_id, *client_row[1:])
 
-    def add_file(self, user_id: uuid, file_name: str, file_path: str):
+    def add_file(self, user_id: UUID, file_name: str, file_path: str):
         file_entry = File(user_id, file_name, str(Path(file_path).absolute()))
         self.files[user_id] = file_entry
+        self.logger.debug(f"Storing file {file_path} information of {user_id}.")
         cursor = self.sqlite_conn.cursor()
         cursor.execute("INSERT INTO files (ID, FileName, PathName, Verified) VALUES (?, ?, ?, ?)",
-                       [user_id, file_entry.file_name, file_entry.path_name, file_entry.verified])
+                       [user_id.bytes, file_entry.file_name, file_entry.path_name, file_entry.verified])
         self.sqlite_conn.commit()
 
-    def verify_file(self, user_id: uuid):
+    def verify_file(self, user_id: UUID):
         self.files[user_id].verified = True
+        self.logger.debug(f"Updating file of user {user_id} as verified.")
         cursor = self.sqlite_conn.cursor()
-        cursor.execute("UPDATE files SET Verified=1 WHERE ID=?", [user_id])
+        cursor.execute("UPDATE files SET Verified=1 WHERE ID=?", [user_id.bytes])
         self.sqlite_conn.commit()
 
     def register_user(self, name: str):
         """ Registers a new client by name, and returns the new client ID. """
 
-        new_id = uuid.uuid4()
+        new_id = uuid4()
         new_user = User(new_id, name)
 
         self.logger.debug(f"Adding new user {name} with ID {new_id}.")
@@ -118,7 +120,7 @@ CREATE TABLE IF NOT EXISTS files (
 
         return new_id
 
-    def save_keys(self, user_id: uuid, public_key: bytes, aes_key: bytes):
+    def save_keys(self, user_id: UUID, public_key: bytes, aes_key: bytes):
         # TODO: Handle KeyError?
         user_to_update = self.users[user_id]
         # TODO: Prevent updating key of an existing user. Return Error.
@@ -132,15 +134,29 @@ CREATE TABLE IF NOT EXISTS files (
                        [public_key, aes_key, user_to_update.id.bytes])
         self.sqlite_conn.commit()
 
-    def get_aes_for_user(self, user_id: uuid) -> bytes:
+    def get_aes_for_user(self, user_id: UUID) -> bytes:
         return self.users[user_id].aes_key
 
     def __login_user(self):
         pass
 
-    def remove_file(self, user_id: uuid):
+    def remove_file(self, user_id: UUID):
         self.files.pop(user_id)
         cursor = self.sqlite_conn.cursor()
         cursor.execute("DELETE from files WHERE ID=?",
-                       [user_to_update.id.bytes])
+                       [user_id.bytes])
         self.sqlite_conn.commit()
+
+    def set_last_seen(self, user_id: UUID) -> None:
+        cursor = self.sqlite_conn.cursor()
+        cursor.execute("UPDATE files SET LastSeen=? WHERE ID=?",
+                       [time.time(), user_id.bytes])
+        self.sqlite_conn.commit()
+        self.sqlite_conn.commit()
+
+    def user_exists(self, user_name) -> bool:
+        """ Returns whether user name already taken in database """
+        cursor = self.sqlite_conn.cursor()
+        matches = cursor.execute("SELECT * FROM clients WHERE Name=?", [user_name]).fetchall()
+        cursor.close()
+        return len(matches) > 0

@@ -13,7 +13,7 @@ MAX_USERNAME_SIZE = 255
 MAX_FILENAME_SIZE = 255
 PUBLIC_KEY_SIZE_BYTES = 160
 CHECKSUM_SIZE_BYTES = 16
-CURRENT_VERSION_NUMBER = 1
+CURRENT_VERSION_NUMBER = 3
 
 
 class ClientRequestType(Enum):
@@ -27,10 +27,10 @@ class ClientRequestType(Enum):
 
 class ServerResponseType(Enum):
     RegisterSuccess = 2100
+    RegistrationFailed = 2101
     ExchangeAes = 2102
     FileUploaded = 2103
     MessageOk = 2104
-    ServerError = -1
 
 
 class AutoParseDataClassStrings:
@@ -77,7 +77,7 @@ class FileUploadContent(AutoParseDataClassStrings):
     file_name: str
 
 
-REQUEST_VERIFY_CHECKSUM_FMT = f"<{MAX_USERNAME_SIZE}s{MAX_FILENAME_SIZE}s"
+REQUEST_VERIFY_CHECKSUM_FMT = f"<{USER_ID_LENGTH_BYTES}s{MAX_FILENAME_SIZE}s"
 
 
 @dataclass
@@ -129,6 +129,7 @@ class FileUploadResponse:
     file_name: str
     cksum: int
 
+
 def remove_null_terminator(input_string: str) -> str:
     return input_string.split('\0', 1)[0]
 
@@ -158,6 +159,8 @@ def receive_request_part(client: socket, req_type: ClientRequestPart) -> Any:
     fmt, type_to_construct = RequestParseInfoMap[req_type]
     recv_size = struct.calcsize(fmt)
     read_bytes = client.recv(recv_size)
+    if not read_bytes:
+        raise IOError
     parsed_args = struct.unpack(fmt, read_bytes)
     result = type_to_construct(*parsed_args)
     process_strings(result)
@@ -193,7 +196,7 @@ def get_response(code: ServerResponseType, payload=None, *format_lengths) -> byt
     """
     Returns a bytes response of the server to a client, for a certain response part.
     :param code: The response type code
-    :param payload: The payload data
+    :param payload: The payload data. Possibly None.
     :param format_lengths: A collection of integers, specifying variable-lengths for packing the payload data.
     """
     if payload is not None:

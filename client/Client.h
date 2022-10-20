@@ -21,6 +21,7 @@ private:
 	tcp::resolver srv_resolver;
 	tcp::socket socket;
 	EncryptedFileSender file_sender;
+	bool _registered = false;
 
 	/// <summary>
 	/// Current user's user name.
@@ -30,9 +31,8 @@ private:
 	/// <summary>
 	/// Current user's ID
 	/// </summary>
-	u_char user_id[USER_ID_BYTE_LENGTH];
+	u_char header_user_id[USER_ID_SIZE_BYTES];
 
-	// public + private + AES objects
 	RSADecryptor rsa;
 public:
 	static const std::string INFO_FILE_NAME;
@@ -64,6 +64,7 @@ public:
 	/// <param name="file_path">The local file path to send.</param>
 	void send_file(std::filesystem::path file_path);
 
+	bool is_registered();
 private:
 
 	/// <summary>
@@ -78,9 +79,11 @@ private:
 	void save_info_file();
 
 	/// <summary>
-	/// Prepares a request object to send.
+	/// Returns a request object, with filled header values, to send to the server.
 	/// </summary>
-	/// <param name="code">The request code to send</param>
+	/// <typeparam name="T">The type of request object to construct. Must inherit ClientRequestBase.</typeparam>
+	/// <param name="code">The resuest code.</param>
+	/// <returns>The constructed request data.</returns>
 	template <class T>
 	inline T get_request(ClientRequestsCode code);
 

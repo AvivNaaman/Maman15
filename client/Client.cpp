@@ -19,7 +19,8 @@ Client::Client(const std::string& host, int port) :
 	boost::asio::connect(socket, endpoint);
 
 	// try loading client info from older sessions
-	load_info_file();
+	if (load_info_file())
+		_registered = true;
 }
 
 
@@ -37,7 +38,7 @@ bool Client::load_info_file() {
 	// user id
 	info_file >> temp_line;
 	if (temp_line.empty()) return false;
-	Uid::parse(temp_line, this->user_id);
+	Uid::parse(temp_line, this->header_user_id);
 
 	// private key
 	info_file >> temp_line;
@@ -57,9 +58,9 @@ void Client::save_info_file() {
 
 	info_file << this->user_name << std::endl;
 
-	Uid::write(info_file, this->user_id, sizeof(this->user_id));
+	Uid::write(info_file, this->header_user_id, sizeof(this->header_user_id));
 
-	info_file << std::endl << Base64::encode(this->rsa.get_private_key()) << std::endl;
+	info_file << std::endl << Base64::encode(this->rsa.get_private_key());
 }
 
 template <class T>
@@ -67,10 +68,10 @@ inline T Client::get_request(ClientRequestsCode code)
 {
 	static_assert(std::is_base_of<ClientRequestBase, T>::value, "T must inherit from ClientRequestBase!");
 	T to_prepare;
-	to_prepare.version = SUPPORTED_PROTOCOL_VERSION;
+	to_prepare.version = PROTOCOL_VERSION;
 	to_prepare.code = code;
 	to_prepare.payload_size = sizeof(T) - sizeof(ClientRequestBase);
-	memcpy(to_prepare.user_id, this->user_id, sizeof(this->user_id));
+	memcpy(to_prepare.header_user_id, this->header_user_id, sizeof(this->header_user_id));
 	return to_prepare;
 }
 
@@ -87,9 +88,10 @@ inline ServerResponseHeader Client::get_header() {
 }
 
 void Client::register_user(std::string user_name) {
+	if (_registered)
+		throw std::exception("User already registered!");
 
-
-	if (user_name.length() > MAX_NAME_SIZE - 1)
+	if (user_name.length() > MAX_USER_NAME_LENGTH - 1)
 		throw std::invalid_argument("user_name");
 
 	auto request = get_request<RegisterRequestType>(ClientRequestsCode::RequestCodeRegister);
@@ -101,7 +103,7 @@ void Client::register_user(std::string user_name) {
 	RegisterSuccess payload;
 	read_static_data_from_socket(&payload, this->socket);
 
-	memcpy(this->user_id, payload.client_id, sizeof(this->user_id));
+	memcpy(this->header_user_id, payload.client_id, sizeof(this->header_user_id));
 
 	std::cout << "Registered client successfully!";
 
@@ -147,7 +149,7 @@ void Client::send_file(std::filesystem::path file_path)
 		// send the file
 		auto request = get_request<SendFileRequestType>(ClientRequestsCode::RequestCodeUploadFile);
 		strcpy_s(request.file_name, sizeof(request.file_name), file_name.c_str());
-		memcpy_s(request.client_id, sizeof(request.user_id), this->user_id, sizeof(this->user_id));
+		memcpy_s(request.client_id, sizeof(request.header_user_id), this->header_user_id, sizeof(this->header_user_id));
 		request.content_size = file_sender.calculate_encrypted_size(file_size(file_path));
 		write_data_to_socket(&request, socket);
 		file_sender.send_local_file(file_path.string(), socket);
@@ -167,10 +169,15 @@ void Client::send_file(std::filesystem::path file_path)
 		// Update server with the checksum validation result
 		auto crequest = get_request<ChecksumStatusRequest>(ClientRequestsCode::RequestCodeValidChecksum);
 		strcpy_s(crequest.file_name, sizeof(crequest.file_name), file_name.c_str());
-		memcpy(crequest.client_id, this->user_id, sizeof(this->user_id));
+		memcpy(crequest.client_id, this->header_user_id, sizeof(this->header_user_id));
 		write_data_to_socket(&crequest, socket);
 
 		// wait for server response before continue
 		get_header();
 	}
+}
+
+bool Client::is_registered()
+{
+	return _registered;
 }
