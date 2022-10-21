@@ -304,7 +304,6 @@ class crc32:
 def socket_to_local_file(src: socket, file_name: str, filesize: int, aes_key: bytes):
     """ Saves a file from socket to a local file, decrypting it's contents using AES. """
     size_left = filesize
-    cipher = AES.new(key=b'Sixteen byte key', mode=AES.MODE_CBC, iv=(b'0' * 16))
     buffer = bytes()
     while size_left > 0:
         # fetch from socket
@@ -312,9 +311,11 @@ def socket_to_local_file(src: socket, file_name: str, filesize: int, aes_key: by
         buffer += rcvd_bytes
         size_left -= len(rcvd_bytes)
 
+    cipher = AES.new(key=aes_key, mode=AES.MODE_CBC, iv=(b'\0' * 16))
     with open(file_name, 'wb+') as f:
-        # f.write(unpad(cipher.decrypt(buffer), AES.block_size))
-        f.write(buffer)
+        decrypted = cipher.decrypt(buffer)
+        unpadded = unpad(decrypted, AES.block_size)
+        f.write(unpadded)
 
 
 def encrypt_with_rsa(publickey, short_data):

@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS files (
         self.files[user_id] = file_entry
         self.logger.debug(f"Storing file {file_path} information of {user_id}.")
         cursor = self.sqlite_conn.cursor()
-        cursor.execute("INSERT INTO files (ID, FileName, PathName, Verified) VALUES (?, ?, ?, ?)",
+        cursor.execute("INSERT OR REPLACE INTO files (ID, FileName, PathName, Verified) VALUES (?, ?, ?, ?)",
                        [user_id.bytes, file_entry.file_name, file_entry.path_name, file_entry.verified])
         self.sqlite_conn.commit()
 
@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS files (
 
     def set_last_seen(self, user_id: UUID) -> None:
         cursor = self.sqlite_conn.cursor()
-        cursor.execute("UPDATE files SET LastSeen=? WHERE ID=?",
+        cursor.execute("UPDATE clients SET LastSeen=? WHERE ID=?",
                        [time.time(), user_id.bytes])
         self.sqlite_conn.commit()
         self.sqlite_conn.commit()

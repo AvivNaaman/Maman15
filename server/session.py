@@ -1,8 +1,6 @@
 import logging
 import os
 import threading
-import uuid
-from socket import socket
 
 import utils
 from db import Database
@@ -55,13 +53,12 @@ class ClientSession(threading.Thread):
         # Gen AES Key
         aes_key = os.urandom(AES_KEY_SIZE_BYTES)
 
-        uid = uuid.UUID(bytes=header.user_id)
         # Save AES Key to database, along with public key
-        self.__db.save_keys(uid, keyx_content.public_key, aes_key)
+        self.__db.save_keys(header.user_id, keyx_content.public_key, aes_key)
 
         # Encrypt AES Key, and return it.
         encrypted_aes = utils.encrypt_with_rsa(keyx_content.public_key, aes_key)
-        payload = KeyExchangeResponse(header.user_id, encrypted_aes)
+        payload = KeyExchangeResponse(header.user_id.bytes, encrypted_aes)
         response = get_response(ServerResponseType.ExchangeAes, payload, len(encrypted_aes))
 
         self.__client.send(response)
@@ -69,9 +66,8 @@ class ClientSession(threading.Thread):
     def upload_file(self, header: RequestHeader):
         upload_content: FileUploadContent = receive_request_part(self.__client,
                                                                  ClientRequestPart.UploadFileInfoContent)
-        current_user_id = uuid.UUID(bytes=header.user_id)
-        aes_key = self.__db.get_aes_for_user(current_user_id)
-        u = self.__db.users[current_user_id]
+        aes_key = self.__db.get_aes_for_user(header.user_id)
+        u = self.__db.users[header.user_id]
 
         # Generate file name & create dir
         try:
@@ -81,11 +77,11 @@ class ClientSession(threading.Thread):
 
         dest_file_name = os.path.join(u.name, upload_content.file_name)
         utils.socket_to_local_file(self.__client, dest_file_name, upload_content.file_size, aes_key)
-        self.__db.add_file(current_user_id, upload_content.file_name, dest_file_name)
+        self.__db.add_file(header.user_id, upload_content.file_name, dest_file_name)
 
         # Return CRC
         file_crc = utils.crc32().calculate(dest_file_name)
-        payload = FileUploadResponse(current_user_id.bytes, upload_content.file_size, upload_content.file_name, file_crc)
+        payload = FileUploadResponse(header.user_id.bytes, upload_content.file_size, upload_content.file_name, file_crc)
         response = get_response(ServerResponseType.ExchangeAes, payload)
 
         self.__client.send(response)
@@ -93,9 +89,9 @@ class ClientSession(threading.Thread):
     def checksum_status(self, header: RequestHeader):
         receive_request_part(self.__client, ClientRequestPart.VerifyChecksumContent)
         if header.code == ClientRequestType.ValidChecksum:
-            self.__db.verify_file(uuid.UUID(bytes=header.user_id))
+            self.__db.verify_file(header.user_id)
         elif header.code == ClientRequestType.InvalidChecksumAbort:
-            self.__db.remove_file(uuid.UUID(bytes=header.user_id))
+            self.__db.remove_file(header.user_id)
         self.default_response()
 
     def default_response(self, *args, **kwargs):

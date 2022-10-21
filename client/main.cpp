@@ -36,15 +36,19 @@ TransferInfo get_transfer_information() {
 
 int main() {
 	auto tinfo = get_transfer_information();
-	char address[] = "localhost";
 	Client c(tinfo.host, tinfo.port);
 	std::cout << "Client connected." << std::endl;
-	c.register_user(tinfo.user_name);
-	std::cout << "Registration succeeded." << std::endl;
+
+	if (!c.is_registered()) {
+		c.register_user(tinfo.user_name);
+		std::cout << "Registration succeeded." << std::endl;
+	}
+
 	c.exchange_keys();
 	std::cout << "Keys exchanged." << std::endl;
+
 	c.send_file(tinfo.file_path);
 	std::cout << "File sent & verified." << std::endl << "Press any key to exit." << std::endl;
-	std::cin.read(address, 1);
+
 	return 0;
 }

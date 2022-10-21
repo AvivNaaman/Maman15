@@ -1,14 +1,17 @@
 #include <string>
 #include <iomanip>
 #include "util.h"
-#include <base64.h>
+#include <cryptopp/base64.h>
 
 inline unsigned char parse_hex(char digit) {
-	if ('A' <= digit && digit <= 'F') {
-		return digit - 'A' + 10;
+	if ('a' <= digit && digit <= 'f') {
+		return digit - 'a' + 10;
 	}
-	else {
+	else if ('0' <= digit && digit <= '9') {
 		return digit - '0';
+	} 
+	else {
+		throw std::domain_error("Provided char is not in hex bounds!");
 	}
 }
 

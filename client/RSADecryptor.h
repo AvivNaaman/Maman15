@@ -2,8 +2,8 @@
 
 #include "protocol.h"
 #include <string>
-#include <rsa.h>
-#include <osrng.h>
+#include <cryptopp/rsa.h>
+#include <cryptopp/osrng.h>
 
 class RSADecryptor
 {

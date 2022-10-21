@@ -3,6 +3,7 @@ from enum import Enum, auto
 from socket import socket
 import struct
 from typing import Any
+from uuid import UUID
 
 # ASCII with range(256) to support garbage.
 TEXT_ENCODING = 'charmap'
@@ -35,7 +36,7 @@ class ServerResponseType(Enum):
 
 class AutoParseDataClassStrings:
     def __post_init__(self):
-        process_strings(self)
+        cast_bytes(self)
 
 
 # Little endian: unsigned short | 16-char string
@@ -44,7 +45,7 @@ REQUEST_HEADER_FMT = f"<{USER_ID_LENGTH_BYTES}sBHL"
 
 @dataclass
 class RequestHeader(AutoParseDataClassStrings):
-    user_id: bytes
+    user_id: UUID
     version: int
     code: ClientRequestType
     payload_size: int
@@ -72,7 +73,7 @@ REQUEST_UPLOAD_FORMAT = f"<{USER_ID_LENGTH_BYTES}sL{MAX_FILENAME_SIZE}s"
 
 @dataclass
 class FileUploadContent(AutoParseDataClassStrings):
-    user_id: bytes
+    user_id: UUID
     file_size: int
     file_name: str
 
@@ -82,7 +83,7 @@ REQUEST_VERIFY_CHECKSUM_FMT = f"<{USER_ID_LENGTH_BYTES}s{MAX_FILENAME_SIZE}s"
 
 @dataclass
 class ChecksumStatusContent(AutoParseDataClassStrings):
-    user_id: bytes
+    user_id: UUID
     file_name: str
 
 
@@ -134,24 +135,28 @@ def remove_null_terminator(input_string: str) -> str:
     return input_string.split('\0', 1)[0]
 
 
-def process_strings(data_class):
+def cast_bytes(data_class):
     """
-    This method parses all strings in dataclass (received as bytes) to a string,
-    and crops the string at the null terminator.
+    This method parses all bytes objects in dataclass to other types, specified by dataclass.
     """
     for field in fields(data_class):
-        if field.type is not str:
-            continue
-
         value = getattr(data_class, field.name)
-        if type(value) is not bytes:
-            continue
 
-        # Decode bytes
-        value = value.decode(TEXT_ENCODING)
-        # Remove null terminator if exists
-        if '\0' in value:
-            value = remove_null_terminator(value)
+        # Parse Null-terminated string
+        if field.type is str:
+            # Decode bytes
+            value = value.decode(TEXT_ENCODING)
+            # Remove null terminator if exists
+            if '\0' in value:
+                value = remove_null_terminator(value)
+        # Parse UUID
+        elif field.type is UUID:
+            value = UUID(bytes=value)
+        # Parse Enum
+        elif issubclass(field.type, Enum):
+            value = field.type(value)
+        else:
+            continue
         setattr(data_class, field.name, value)
 
 
@@ -163,7 +168,6 @@ def receive_request_part(client: socket, req_type: ClientRequestPart) -> Any:
         raise IOError
     parsed_args = struct.unpack(fmt, read_bytes)
     result = type_to_construct(*parsed_args)
-    process_strings(result)
     return result
 
 

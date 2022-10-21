@@ -58,5 +58,6 @@
     <None Include="transfer.info">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="me.info" />
   </ItemGroup>
 </Project>
