@@ -3,33 +3,43 @@
 #include <boost/asio.hpp>
 #include <iostream>
 
-template <typename T>
-union SocketData {
-	unsigned char as_buffer[sizeof(T)];
-	T as_original;
+/// <summary>
+/// This class provides helper methods to handle socket operations with boost::asio::ip::tcp::socket objects.
+/// </summary>
+class SocketHelper {
+private:
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <typeparam name="T"></typeparam>
+	template <typename T>
+	union _SocketData {
+		unsigned char as_buffer[sizeof(T)];
+		T as_original;
+	};
+public:
+	template <typename T>
+	static void read_static(T* dest_data,
+		boost::asio::ip::tcp::socket& src) {
+		auto* dest = (_SocketData<T>*)dest_data;
+		boost::asio::read(src, boost::asio::buffer(dest->as_buffer, sizeof(dest->as_buffer)));
+	}
+
+	template <typename T>
+	static void read_dynamic(T* dest_data,
+		boost::asio::ip::tcp::socket& src,
+		size_t read_count) {
+		unsigned char* temp = (unsigned char*)dest_data;
+		boost::asio::read(src, boost::asio::buffer(temp, read_count));
+	}
+
+	template <typename T>
+	static void write_static(T* source_data,
+		boost::asio::ip::tcp::socket& dest) {
+		auto src = (_SocketData<T>*)source_data;
+		boost::asio::write(dest, boost::asio::buffer(src->as_buffer, sizeof(src->as_buffer)));
+	}
 };
-
-template <typename T>
-void read_static_data_from_socket(T* dest_data,
-	boost::asio::ip::tcp::socket& src) {
-	auto* dest = (SocketData<T>*)dest_data;
-	boost::asio::read(src, boost::asio::buffer(dest->as_buffer, sizeof(dest->as_buffer)));
-}
-
-template <typename T>
-void read_dynamic_data_from_socket(T* dest_data,
-	boost::asio::ip::tcp::socket& src,
-	size_t read_count) {
-	unsigned char *temp = (unsigned char*)dest_data;
-	boost::asio::read(src, boost::asio::buffer(temp, read_count));
-}
-
-template <typename T>
-void write_data_to_socket(T* source_data,
-	boost::asio::ip::tcp::socket& dest) {
-	auto src = (SocketData<T>*)source_data;
-	boost::asio::write(dest, boost::asio::buffer(src->as_buffer, sizeof(src->as_buffer)));
-}
 
 class Uid {
 public:

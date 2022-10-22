@@ -2,12 +2,13 @@ from dataclasses import dataclass, fields
 from enum import Enum, auto
 from socket import socket
 import struct
-from typing import Any
+from typing import Any, Dict, Type
 from uuid import UUID
 
 # ASCII with range(256) to support garbage.
 TEXT_ENCODING = 'charmap'
 
+# Global constants
 USER_ID_LENGTH_BYTES = 16
 AES_KEY_SIZE_BYTES = 16
 MAX_USERNAME_SIZE = 255
@@ -16,8 +17,9 @@ PUBLIC_KEY_SIZE_BYTES = 160
 CHECKSUM_SIZE_BYTES = 16
 CURRENT_VERSION_NUMBER = 3
 
+################################## Request parsers ##################################
 
-class ClientRequestType(Enum):
+class ClientRequestCodes(Enum):
     Register = 1100
     KeyExchange = 1101
     UploadFile = 1103
@@ -26,89 +28,107 @@ class ClientRequestType(Enum):
     InvalidChecksumAbort = 1106
 
 
-class ServerResponseType(Enum):
+class AutoCastTypesDataClass:
+    def __post_init__(self):
+        """
+        This method parses all bytes objects in dataclass to other types, specified by dataclass.
+        """
+        for field in fields(self):
+            value = getattr(self, field.name)
+
+            # Parse Null-terminated string from bytes
+            if field.type is str and type(value) is bytes:
+                # Decode bytes
+                value = value.decode(TEXT_ENCODING)
+                # Remove null terminator if exists
+                if '\0' in value:
+                    value = value.split('\0', 1)[0]
+            # Parse UUID
+            elif field.type is UUID and type(value) is bytes:
+                value = UUID(bytes=value)
+            # Parse Enum
+            elif issubclass(field.type, Enum):
+                value = field.type(value)
+            else:
+                continue
+            setattr(self, field.name, value)
+
+
+@dataclass
+class RequestHeader(AutoCastTypesDataClass):
+    user_id: UUID
+    version: int
+    code: ClientRequestCodes
+    payload_size: int
+
+
+@dataclass
+class RegisterRequestContent(AutoCastTypesDataClass):
+    name: str
+
+
+@dataclass
+class KeyExchangeContent(AutoCastTypesDataClass):
+    name: str
+    public_key: bytes
+
+
+@dataclass
+class FileUploadContent(AutoCastTypesDataClass):
+    user_id: UUID
+    file_size: int
+    file_name: str
+
+
+@dataclass
+class ChecksumStatusContent(AutoCastTypesDataClass):
+    user_id: UUID
+    file_name: str
+
+# This maps request codes to their data types.
+RequestCodeToDataTypeMap = {
+    ClientRequestCodes.Register: RegisterRequestContent,
+    ClientRequestCodes.KeyExchange: KeyExchangeContent,
+    ClientRequestCodes.UploadFile: FileUploadContent,
+    ClientRequestCodes.ValidChecksum: ChecksumStatusContent,
+    ClientRequestCodes.InvalidChecksumRetry: ChecksumStatusContent,
+    ClientRequestCodes.InvalidChecksumAbort: ChecksumStatusContent,
+}
+
+# This maps data type to it's structual format.
+RequestParseInfoMap: Dict[Type, str] = {
+    RequestHeader: f"<{USER_ID_LENGTH_BYTES}sBHL",
+    RegisterRequestContent: f"<{MAX_USERNAME_SIZE}s",
+    KeyExchangeContent: f"<{MAX_USERNAME_SIZE}s{PUBLIC_KEY_SIZE_BYTES}s",
+    FileUploadContent: f"<{USER_ID_LENGTH_BYTES}sL{MAX_FILENAME_SIZE}s",
+    ChecksumStatusContent: f"<{USER_ID_LENGTH_BYTES}s{MAX_FILENAME_SIZE}s",
+}
+
+def receive_request_part(client: socket, req_type: Type) -> Any:
+    fmt = RequestParseInfoMap[req_type]
+    recv_size = struct.calcsize(fmt)
+    read_bytes = client.recv(recv_size)
+
+    if not read_bytes:
+        raise IOError
+    
+    parsed_args = struct.unpack(fmt, read_bytes)
+    result = req_type(*parsed_args)
+    return result
+
+################################## Response builders ##################################
+
+class ServerResponseCodes(Enum):
     RegisterSuccess = 2100
     RegistrationFailed = 2101
     ExchangeAes = 2102
     FileUploaded = 2103
     MessageOk = 2104
 
-
-class AutoParseDataClassStrings:
-    def __post_init__(self):
-        cast_bytes(self)
-
-
-# Little endian: unsigned short | 16-char string
-REQUEST_HEADER_FMT = f"<{USER_ID_LENGTH_BYTES}sBHL"
-
-
-@dataclass
-class RequestHeader(AutoParseDataClassStrings):
-    user_id: UUID
-    version: int
-    code: ClientRequestType
-    payload_size: int
-
-
-REQUEST_REGISTER_FMT = f"<{MAX_USERNAME_SIZE}s"
-
-
-@dataclass
-class RegisterRequestContent(AutoParseDataClassStrings):
-    name: str
-
-
-REQUEST_KEY_EXCHANGE_FORMAT = f"<{MAX_USERNAME_SIZE}s{PUBLIC_KEY_SIZE_BYTES}s"
-
-
-@dataclass
-class KeyExchangeContent(AutoParseDataClassStrings):
-    name: str
-    public_key: bytes
-
-
-REQUEST_UPLOAD_FORMAT = f"<{USER_ID_LENGTH_BYTES}sL{MAX_FILENAME_SIZE}s"
-
-
-@dataclass
-class FileUploadContent(AutoParseDataClassStrings):
-    user_id: UUID
-    file_size: int
-    file_name: str
-
-
-REQUEST_VERIFY_CHECKSUM_FMT = f"<{USER_ID_LENGTH_BYTES}s{MAX_FILENAME_SIZE}s"
-
-
-@dataclass
-class ChecksumStatusContent(AutoParseDataClassStrings):
-    user_id: UUID
-    file_name: str
-
-
-class ClientRequestPart(Enum):
-    Header = 0
-    RegisterContent = auto()
-    KeyExchangeContent = auto()
-    UploadFileInfoContent = auto()
-    VerifyChecksumContent = auto()
-
-
-RequestParseInfoMap = {
-    ClientRequestPart.Header: (REQUEST_HEADER_FMT, RequestHeader),
-    ClientRequestPart.RegisterContent: (REQUEST_REGISTER_FMT, RegisterRequestContent),
-    ClientRequestPart.KeyExchangeContent: (REQUEST_KEY_EXCHANGE_FORMAT, KeyExchangeContent),
-    ClientRequestPart.UploadFileInfoContent: (REQUEST_UPLOAD_FORMAT, FileUploadContent),
-    ClientRequestPart.VerifyChecksumContent: (REQUEST_VERIFY_CHECKSUM_FMT, ChecksumStatusContent),
-}
-
-
-
 @dataclass
 class ResponseHeader:
     version: int = CURRENT_VERSION_NUMBER
-    code: ServerResponseType = ServerResponseType.MessageOk
+    code: ServerResponseCodes = ServerResponseCodes.MessageOk
     payload_size: int = 0
 
 
@@ -129,46 +149,6 @@ class FileUploadResponse:
     content_size: int
     file_name: str
     cksum: int
-
-
-def remove_null_terminator(input_string: str) -> str:
-    return input_string.split('\0', 1)[0]
-
-
-def cast_bytes(data_class):
-    """
-    This method parses all bytes objects in dataclass to other types, specified by dataclass.
-    """
-    for field in fields(data_class):
-        value = getattr(data_class, field.name)
-
-        # Parse Null-terminated string
-        if field.type is str:
-            # Decode bytes
-            value = value.decode(TEXT_ENCODING)
-            # Remove null terminator if exists
-            if '\0' in value:
-                value = remove_null_terminator(value)
-        # Parse UUID
-        elif field.type is UUID:
-            value = UUID(bytes=value)
-        # Parse Enum
-        elif issubclass(field.type, Enum):
-            value = field.type(value)
-        else:
-            continue
-        setattr(data_class, field.name, value)
-
-
-def receive_request_part(client: socket, req_type: ClientRequestPart) -> Any:
-    fmt, type_to_construct = RequestParseInfoMap[req_type]
-    recv_size = struct.calcsize(fmt)
-    read_bytes = client.recv(recv_size)
-    if not read_bytes:
-        raise IOError
-    parsed_args = struct.unpack(fmt, read_bytes)
-    result = type_to_construct(*parsed_args)
-    return result
 
 
 ResponseEncodeMap = {
@@ -196,7 +176,7 @@ def encode_response_part(obj_to_encode: Any, *format_lengths):
     return struct.pack(fmt, *vals)
 
 
-def get_response(code: ServerResponseType, payload=None, *format_lengths) -> bytes:
+def get_response(code: ServerResponseCodes, payload=None, *format_lengths) -> bytes:
     """
     Returns a bytes response of the server to a client, for a certain response part.
     :param code: The response type code

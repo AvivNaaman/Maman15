@@ -6,7 +6,6 @@
 #include <cryptopp/aes.h>
 #include <cryptopp/filters.h>
 #include <cryptopp/files.h>
-#include "AESWrapper.h"
 
 const CryptoPP::byte EncryptedFileSender::iv[CryptoPP::AES::BLOCKSIZE] = { 0 };
 

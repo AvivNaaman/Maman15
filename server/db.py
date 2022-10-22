@@ -75,6 +75,7 @@ CREATE TABLE IF NOT EXISTS files (
         self.sqlite_conn.commit()
 
     def __load_data(self):
+        """ This method loads all the persistant SQLite3 DB data into the memory. TODO: Is this required? """
         cursor = self.sqlite_conn.cursor()
         all_files = cursor.execute("SELECT * FROM files").fetchall()
         all_users = cursor.execute("SELECT * FROM clients").fetchall()
@@ -134,24 +135,24 @@ CREATE TABLE IF NOT EXISTS files (
                        [public_key, aes_key, user_to_update.id.bytes])
         self.sqlite_conn.commit()
 
-    def get_aes_for_user(self, user_id: UUID) -> bytes:
+    def get_aes_for_user(self, user_id: UUID) -> Optional[bytes]:
         return self.users[user_id].aes_key
-
-    def __login_user(self):
-        pass
 
     def remove_file(self, user_id: UUID):
         self.files.pop(user_id)
         cursor = self.sqlite_conn.cursor()
         cursor.execute("DELETE from files WHERE ID=?",
                        [user_id.bytes])
+        cursor.close()
         self.sqlite_conn.commit()
 
     def set_last_seen(self, user_id: UUID) -> None:
+        """ Updates the last seen of a user to now. """
+        self.users[user_id].last_seen = time.time()
         cursor = self.sqlite_conn.cursor()
         cursor.execute("UPDATE clients SET LastSeen=? WHERE ID=?",
                        [time.time(), user_id.bytes])
-        self.sqlite_conn.commit()
+        cursor.close()
         self.sqlite_conn.commit()
 
     def user_exists(self, user_name) -> bool:
