@@ -7,6 +7,8 @@ from db import Database
 from protocol import *
 
 class ClientSession(threading.Thread):
+    """ Represents a session of the server with the client - Runs in the background as a thread. """
+
     def __init__(self, client_socket: socket, database: Database):
         super().__init__(daemon=True)
         self.__client = client_socket
@@ -15,17 +17,20 @@ class ClientSession(threading.Thread):
 
     def run(self):
         try:
-            # Until connection is closed, handle requests
+            # Until connection is closed (IOError), handle requests
             while True:
                 self.handle_single_request()
-        except IOError:
-            pass
+
+        except ClientDisconnectedException:
+            self.__logger.info("Client disconnected.")
+
         except Exception as ex:
-            self.__logger.error("Error raised while processing client!")
+            self.__logger.error(f"Error raised while processing client: {ex.with_traceback()}")
             raise ex
 
 
     def handle_single_request(self):
+        """ Parses a single requests, and calls the specified request handler in the HANDLERS_MAP """
         # Get Header
         header: RequestHeader = receive_request_part(self.__client, RequestHeader)
         header_request = ClientRequestCodes(header.code)
@@ -40,7 +45,7 @@ class ClientSession(threading.Thread):
         self.HANDLERS_MAP[header_request](self, header, content)
 
     def register(self, header: RequestHeader, content: RegisterRequestContent):
-
+        """ Handels registration requests. """
         if self.__db.user_exists(content.name):
             self.__client.send(get_response(ServerResponseCodes.RegistrationFailed))
             self.__logger.debug(f"Failed registration of duplicated user name {content.name}")
@@ -54,7 +59,7 @@ class ClientSession(threading.Thread):
         self.__client.send(response)
 
     def key_exchange(self, header: RequestHeader, content: KeyExchangeContent):
-
+        """ Handels key exchange requests. """
         # Gen AES Key
         aes_key = os.urandom(AES_KEY_SIZE_BYTES)
 
@@ -69,6 +74,7 @@ class ClientSession(threading.Thread):
         self.__client.send(response)
 
     def upload_file(self, header: RequestHeader, content: FileUploadContent):
+        """ Handels upload file requests. """
         aes_key = self.__db.get_aes_for_user(header.user_id)
         if aes_key is None:
             raise ValueError("AES Key not found for specified user.")
@@ -87,11 +93,12 @@ class ClientSession(threading.Thread):
         # Return CRC
         file_crc = utils.crc32().calculate(dest_file_name)
         payload = FileUploadResponse(header.user_id.bytes, content.file_size, content.file_name, file_crc)
-        response = get_response(ServerResponseCodes.ExchangeAes, payload)
+        response = get_response(ServerResponseCodes.FileUploaded, payload)
 
         self.__client.send(response)
 
     def checksum_status(self, header: RequestHeader, content: ChecksumStatusContent):
+        """ Handels checksum status requests. """
         if header.code == ClientRequestCodes.ValidChecksum:
             self.__db.verify_file(header.user_id)
         elif header.code == ClientRequestCodes.InvalidChecksumAbort:
@@ -99,6 +106,7 @@ class ClientSession(threading.Thread):
         self.default_response()
 
     def default_response(self, *args, **kwargs):
+        """ Returns a response with the default code & content. """
         self.__client.send(get_response(ServerResponseCodes.MessageOk))
 
     

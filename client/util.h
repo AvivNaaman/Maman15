@@ -9,7 +9,7 @@
 class SocketHelper {
 private:
 	/// <summary>
-	/// 
+	/// Helper union to switch between raw & structual representation of a struct memory
 	/// </summary>
 	/// <typeparam name="T"></typeparam>
 	template <typename T>
@@ -18,38 +18,63 @@ private:
 		T as_original;
 	};
 public:
+	/// <summary>
+	/// Recieved a static struct's data from the socket.
+	/// </summary>
 	template <typename T>
-	static void read_static(T* dest_data,
+	static void recieve_static(T* dest_data,
 		boost::asio::ip::tcp::socket& src) {
 		auto* dest = (_SocketData<T>*)dest_data;
 		boost::asio::read(src, boost::asio::buffer(dest->as_buffer, sizeof(dest->as_buffer)));
 	}
 
+	/// <summary>
+	/// Recieves a dynamic amount of a struct's data from the socket.
+	/// </summary>
 	template <typename T>
-	static void read_dynamic(T* dest_data,
+	static void recieve_dynamic(T* dest_data,
 		boost::asio::ip::tcp::socket& src,
 		size_t read_count) {
 		unsigned char* temp = (unsigned char*)dest_data;
 		boost::asio::read(src, boost::asio::buffer(temp, read_count));
 	}
 
+	/// <summary>
+	/// Sends a static data in struct through the socket.
+	/// </summary>
 	template <typename T>
-	static void write_static(T* source_data,
+	static void send_static(T* source_data,
 		boost::asio::ip::tcp::socket& dest) {
 		auto src = (_SocketData<T>*)source_data;
 		boost::asio::write(dest, boost::asio::buffer(src->as_buffer, sizeof(src->as_buffer)));
 	}
 };
 
+/// <summary>
+/// A helper class to perform read/write operations on UIDs with streams.
+/// </summary>
 class Uid {
 public:
+	/// <summary>
+	/// parses uid from string to a buffer.
+	/// </summary>
 	static void parse(const std::string& input, unsigned char* destination);
 	static void write(std::ostream& out_s, unsigned char* source, size_t len);
 };
 
-
+/// <summary>
+/// A helper class to perform encoding/decoding operations on base64 strings.
+/// </summary>
 class Base64 {
 public:
+	/// <summary>
+	/// Encodes a string to it's base64 representation.
+	/// </summary>
 	static std::string decode(const std::string& source);
+	/// <summary>
+	/// Decodes a base64 string to it's respresentation.
+	/// </summary>
+	/// <param name="source"></param>
+	/// <returns></returns>
 	static std::string encode(const std::string& source);
 };

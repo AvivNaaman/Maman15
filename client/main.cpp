@@ -43,12 +43,15 @@ int main() {
 		c.register_user(tinfo.user_name);
 		std::cout << "Registration succeeded." << std::endl;
 	}
+	else {
+		std::cout << "Client is already registered with the server.";
+	}
 
 	c.exchange_keys();
 	std::cout << "Keys exchanged." << std::endl;
 
 	c.send_file(tinfo.file_path);
-	std::cout << "File sent & verified." << std::endl << "Press any key to exit." << std::endl;
+	std::cout << "File sent & verified." << std::endl;
 
 	return 0;
 }

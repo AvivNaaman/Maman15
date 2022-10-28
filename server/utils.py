@@ -304,13 +304,18 @@ class crc32:
 def socket_to_local_file(src: socket, file_name: str, filesize: int, aes_key: bytes):
     """ Saves a file from socket to a local file, decrypting it's contents using AES. """
     size_left = filesize
+
+    # Read the file to memory
     buffer = bytes()
     while size_left > 0:
         # fetch from socket
         rcvd_bytes = src.recv(min(size_left, 1024))
+        if not rcvd_bytes:
+            raise ClientDisconnectedException()
         buffer += rcvd_bytes
         size_left -= len(rcvd_bytes)
 
+    # Decrypt and save the file
     cipher = AES.new(key=aes_key, mode=AES.MODE_CBC, iv=(b'\0' * 16))
     with open(file_name, 'wb+') as f:
         decrypted = cipher.decrypt(buffer)
@@ -318,7 +323,12 @@ def socket_to_local_file(src: socket, file_name: str, filesize: int, aes_key: by
         f.write(unpadded)
 
 
-def encrypt_with_rsa(publickey, short_data):
-    """ Encrypts some short data using RSA by the provided public key. """
+def encrypt_with_rsa(publickey: bytes, short_data: bytes) -> bytes:
+    """ Encrypts short data using RSA with the provided public key. """
     loaded_key = RSA.importKey(publickey)
     return PKCS1_OAEP.new(loaded_key).encrypt(short_data)
+
+
+class ClientDisconnectedException(IOError):
+    """ Use this exception to notify of client unexpected disconnection. """
+    pass

@@ -16,11 +16,14 @@ using boost::asio::ip::tcp;
  */
 class Client {
 private:
-	/* Socket, Resolver and IO Context */
+	/* Socket, Resolver, IO Context */
 	boost::asio::io_context client_io_ctx;
 	tcp::resolver srv_resolver;
 	tcp::socket socket;
 	EncryptedFileSender file_sender;
+	/// <summary>
+	/// Whether the current client's user is registered.
+	/// </summary>
 	bool _registered = false;
 
 	/// <summary>
@@ -31,7 +34,7 @@ private:
 	/// <summary>
 	/// Current user's ID
 	/// </summary>
-	u_char header_user_id[USER_ID_SIZE_BYTES];
+	u_char header_user_id[USER_ID_SIZE_BYTES] = { 0 };
 
 	RSADecryptor rsa;
 public:
@@ -64,6 +67,10 @@ public:
 	/// <param name="file_path">The local file path to send.</param>
 	void send_file(std::filesystem::path file_path);
 
+	/// <summary>
+	/// Returns whether the current client is a registered user in the server.
+	/// </summary>
+	/// <returns></returns>
 	bool is_registered();
 private:
 
@@ -89,8 +96,16 @@ private:
 
 	/// <summary>
 	/// Fetches the server's response from the socket, and returns the header.
+	/// Validates that the response header code matches the expected response, throws std::exception otherwise.
 	/// </summary>
+	/// <param name="code"></param>
 	/// <returns>The header's value</returns>
-	inline ServerResponseHeader get_header();
+	inline ServerResponseHeader get_header(ServerResponseCode code);
+
+	/// <summary>
+	/// Executes upload request of a single file, and returns the result CRC if succeeded.
+	/// </summary>
+	/// <returns></returns>
+	unsigned int upload_single_file(std::filesystem::path file_path);
 };
 

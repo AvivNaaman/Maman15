@@ -2,6 +2,7 @@
 #include <iomanip>
 #include "util.h"
 #include <cryptopp/base64.h>
+#include "protocol.h"
 
 inline unsigned char parse_hex(char digit) {
 	if ('a' <= digit && digit <= 'f') {
@@ -11,7 +12,7 @@ inline unsigned char parse_hex(char digit) {
 		return digit - '0';
 	} 
 	else {
-		throw std::domain_error("Provided char is not in hex bounds!");
+		throw std::domain_error("Char is not hexadecimal!");
 	}
 }
 
@@ -22,7 +23,10 @@ inline unsigned char parse_hex_byte(const char* hexdigits) {
 }
 
 void Uid::parse(const std::string& input, unsigned char* destination) {
-	for (int i = 0; i < input.length() / 2; ++i) {
+	if (input.length() != USER_ID_SIZE_BYTES / 2)
+		throw std::invalid_argument("Input string is not in the correct length.");
+
+	for (int i = 0; i < USER_ID_SIZE_BYTES / 2; ++i) {
 		destination[i] = parse_hex_byte(input.c_str() + 2 * i);
 	}
 }
