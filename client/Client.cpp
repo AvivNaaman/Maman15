@@ -13,63 +13,16 @@ const std::string Client::INFO_FILE_NAME = "me.info";
 Client::Client(const std::string& host, int port) :
 	srv_resolver(client_io_ctx),
 	socket(client_io_ctx),
-	file_sender() {
+	info_file() {
+
 	// connect socket
 	auto endpoint = srv_resolver.resolve(host, std::to_string(port));
 	boost::asio::connect(socket, endpoint);
 
-	// try loading client info from older sessions
-	if (load_info_file())
-		_registered = true;
-}
-
-
-bool Client::load_info_file() {
-	try {
-		std::ifstream info_file(Client::INFO_FILE_NAME);
-
-		if (!info_file.is_open()) {
-			return false;
-		}
-		// user name
-		std::getline(info_file, this->user_name);
-
-		std::string temp_line;
-
-		// user id
-		info_file >> temp_line;
-		if (temp_line.empty()) return false;
-
-		Uid::parse(temp_line, this->header_user_id);
-		// TODO: Validate this!
-#define PRIVATE_KEY_SIZE_BASE64 (844)
-		// private key
-		info_file >> temp_line;
-		if (temp_line.length() != PRIVATE_KEY_SIZE_BASE64) {
-			return false;
-		}
-		// decode & set
-		auto private_key = Base64::decode(temp_line);
-		rsa.setKey(private_key);
-		return true;
+	if (info_file.is_loaded()) {
+		this->_registered = true;
+		rsa.setKey(info_file.rsa_private_key);
 	}
-	catch (const std::exception&) {
-		return false;
-	}
-}
-
-void Client::save_info_file() {
-	std::ofstream info_file(Client::INFO_FILE_NAME);
-
-	if (!info_file.is_open()) {
-		return;
-	}
-
-	info_file << this->user_name << std::endl;
-
-	Uid::write(info_file, this->header_user_id, sizeof(this->header_user_id));
-
-	info_file << std::endl << Base64::encode(this->rsa.get_private_key());
 }
 
 template <class T>
@@ -80,7 +33,7 @@ inline T Client::get_request(ClientRequestsCode code)
 	to_prepare.version = PROTOCOL_VERSION;
 	to_prepare.code = code;
 	to_prepare.payload_size = sizeof(T) - sizeof(ClientRequestBase);
-	memcpy(to_prepare.header_user_id, this->header_user_id, sizeof(this->header_user_id));
+	memcpy(to_prepare.header_user_id, info_file.header_user_id, sizeof(info_file.header_user_id));
 	return to_prepare;
 }
 
@@ -114,14 +67,14 @@ void Client::register_user(std::string user_name) {
 	SocketHelper::recieve_static(&payload, this->socket);
 
 	// Temporarily save assigned user id
-	memcpy(this->header_user_id, payload.client_id, sizeof(this->header_user_id));
+	memcpy(info_file.header_user_id, payload.client_id, sizeof(info_file.header_user_id));
 
 	std::cout << "Registered client successfully!";
 
 	// generate key pair - because registered.
 	rsa.gen_key();
 
-	this->user_name = user_name;
+	info_file.user_name = user_name;
 }
 
 void Client::exchange_keys()
@@ -133,7 +86,7 @@ void Client::exchange_keys()
 	auto request = get_request<KeyExchangeRequestType>(ClientRequestsCode::RequestCodeKeyExchange);
 	// send public key
 	memcpy(request.public_key, rsa.get_public_key().c_str(), sizeof(request.public_key));
-	memcpy(request.user_name, user_name.c_str(), sizeof(request.user_name));
+	memcpy(request.user_name, info_file.user_name.c_str(), sizeof(request.user_name));
 	SocketHelper::send_static(&request, socket);
 
 	auto header = get_header(ServerResponseCode::ResponseCodeExchangeAes);
@@ -145,9 +98,8 @@ void Client::exchange_keys()
 	auto key_dest = new char[key_exp_size];
 	SocketHelper::recieve_dynamic(key_dest, socket, key_exp_size);
 	std::string aes_key = rsa.decrypt(std::string(key_dest, key_exp_size));
-
-	file_sender.set_key(aes_key);
-	save_info_file();
+	this->aes_key = aes_key;
+	info_file.save();
 }
 
 #define SEND_FILE_RETRY_COUNT (3)
@@ -157,15 +109,16 @@ unsigned int Client::upload_single_file(std::filesystem::path file_path) {
 		throw std::runtime_error("User must be registered & have keys to begin file upload!");
 	}
 
+	EncryptedFileSender file_sender(file_path, aes_key);
 	// send the file
 	auto file_name = file_path.filename().string();
 	auto request = get_request<SendFileRequestType>(ClientRequestsCode::RequestCodeUploadFile);
 	strcpy_s(request.file_name, sizeof(request.file_name), file_name.c_str());
-	memcpy_s(request.client_id, sizeof(request.header_user_id), this->header_user_id, sizeof(this->header_user_id));
-	request.content_size = file_sender.calculate_encrypted_size(file_size(file_path));
+	memcpy_s(request.client_id, sizeof(request.header_user_id), info_file.header_user_id, sizeof(info_file.header_user_id));
+	request.content_size = file_sender.encrypted_size();
 
 	SocketHelper::send_static(&request, socket);
-	file_sender.send_local_file(file_path.string(), socket);
+	file_sender.send(socket);
 
 	// fetch response
 	auto header = get_header(ServerResponseCode::ResponseCodeFileUploaded);
@@ -200,7 +153,7 @@ void Client::send_file(std::filesystem::path file_path)
 		// Update server with the checksum validation result
 		auto crequest = get_request<ChecksumStatusRequest>(status_code);
 		strcpy_s(crequest.file_name, sizeof(crequest.file_name), file_name.c_str());
-		memcpy(crequest.client_id, this->header_user_id, sizeof(this->header_user_id));
+		memcpy(crequest.client_id, info_file.header_user_id, sizeof(info_file.header_user_id));
 		SocketHelper::send_static(&crequest, socket);
 
 		// wait for server OK response before continuing.

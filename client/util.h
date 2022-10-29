@@ -2,6 +2,7 @@
 
 #include <boost/asio.hpp>
 #include <iostream>
+#include "protocol.h"
 
 /// <summary>
 /// This class provides helper methods to handle socket operations with boost::asio::ip::tcp::socket objects.
@@ -77,4 +78,28 @@ public:
 	/// <param name="source"></param>
 	/// <returns></returns>
 	static std::string encode(const std::string& source);
+};
+
+
+class MeInfo {
+	bool _file_loaded;
+	static const std::string FILE_NAME;
+	bool try_load();
+public:
+
+	/// <summary>
+	/// Current user's user name.
+	/// </summary>
+	std::string user_name;
+
+	/// <summary>
+	/// Current user's ID
+	/// </summary>
+	u_char header_user_id[USER_ID_SIZE_BYTES] = { 0 };
+
+	std::string rsa_private_key;
+
+	MeInfo();
+	void save();
+	bool is_loaded();
 };

@@ -20,23 +20,15 @@ private:
 	boost::asio::io_context client_io_ctx;
 	tcp::resolver srv_resolver;
 	tcp::socket socket;
-	EncryptedFileSender file_sender;
 	/// <summary>
 	/// Whether the current client's user is registered.
 	/// </summary>
 	bool _registered = false;
 
-	/// <summary>
-	/// Current user's user name.
-	/// </summary>
-	std::string user_name;
-
-	/// <summary>
-	/// Current user's ID
-	/// </summary>
-	u_char header_user_id[USER_ID_SIZE_BYTES] = { 0 };
 
 	RSADecryptor rsa;
+	std::string aes_key;
+	MeInfo info_file;
 public:
 	static const std::string INFO_FILE_NAME;
 
@@ -73,17 +65,6 @@ public:
 	/// <returns></returns>
 	bool is_registered();
 private:
-
-	/// <summary>
-	/// Loads the information file data of an already registered user to the client.
-	/// </summary>
-	/// <returns>Whether the file read & parsed successfully.</returns>
-	bool load_info_file();
-
-	/// <summary>
-	/// Saves the current client's registered user data to the information file.
-	/// </summary>
-	void save_info_file();
 
 	/// <summary>
 	/// Returns a request object, with filled header values, to send to the server.

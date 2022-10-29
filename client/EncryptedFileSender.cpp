@@ -9,26 +9,25 @@
 
 const CryptoPP::byte EncryptedFileSender::iv[CryptoPP::AES::BLOCKSIZE] = { 0 };
 
-EncryptedFileSender::EncryptedFileSender() {}
-
-void EncryptedFileSender::set_key(std::string key)
-{
-	memcpy_s(_aes_key, sizeof(_aes_key), key.c_str(), key.length());
-}
+EncryptedFileSender::EncryptedFileSender(std::filesystem::path path, std::string key) : file_path(path), _aes_key(key) {}
 
 #define CHUNK_SIZE (1024)
 
-void EncryptedFileSender::send_local_file(std::string path,
-	boost::asio::ip::tcp::socket& socket) {
-	std::ifstream to_send(path, std::ios::binary);
+void EncryptedFileSender::send(boost::asio::ip::tcp::socket& socket) {
+	std::ifstream to_send(file_path, std::ios::binary);
+
+	unsigned char key_temp[AES_KEY_LENGTH_BYTES];
+	memcpy(key_temp, _aes_key.c_str(), sizeof(key_temp));
 
 	CryptoPP::CBC_Mode<CryptoPP::AES>::Encryption e;
-	e.SetKeyWithIV(_aes_key, sizeof(_aes_key), iv);
+
+	e.SetKeyWithIV(key_temp, sizeof(key_temp), iv);
+
 	std::string cipher;
 	CryptoPP::FileSource fs(to_send, true, new CryptoPP::StreamTransformationFilter(e, new CryptoPP::StringSink(cipher)));
 	boost::asio::write(socket, boost::asio::buffer(cipher));
 }
 
-size_t EncryptedFileSender::calculate_encrypted_size(size_t plain_size) {
-	return (ceil(plain_size / CryptoPP::AES::BLOCKSIZE) + 1) * CryptoPP::AES::BLOCKSIZE;
+size_t EncryptedFileSender::encrypted_size() {
+	return (ceil(std::filesystem::file_size(file_path) / CryptoPP::AES::BLOCKSIZE) + 1) * CryptoPP::AES::BLOCKSIZE;
 }

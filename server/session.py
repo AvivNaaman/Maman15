@@ -25,7 +25,8 @@ class ClientSession(threading.Thread):
             self.__logger.info("Client disconnected.")
 
         except Exception as ex:
-            self.__logger.error(f"Error raised while processing client: {ex.with_traceback()}")
+            import traceback
+            self.__logger.error(f"Error raised while processing client: {traceback.format_exc()}")
             raise ex
 
 

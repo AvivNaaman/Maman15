@@ -9,7 +9,7 @@ class EncryptedFileSender
 	/// <summary>
 	/// Holds the current AES Key.
 	/// </summary>
-	unsigned char _aes_key[AES_KEY_LENGTH_BYTES];
+	std::string _aes_key;
 	/// <summary>
 	/// AES Encryption provider reference.
 	/// </summary>
@@ -18,23 +18,23 @@ class EncryptedFileSender
 	/// Holds the IV for the AES encryption
 	/// </summary>
 	static const CryptoPP::byte iv[CryptoPP::AES::BLOCKSIZE];
+
+	std::filesystem::path file_path;
 public:
 	/// <summary>
 	/// Creates a new encrypted file sender.
+	/// <param name="file_path">The source file path.</param>
 	/// </summary>
-	EncryptedFileSender();
-	/// <summary>
-	/// Sets the encryption key for the file sender.
-	/// </summary>
-	void set_key(std::string key);
+	EncryptedFileSender(std::filesystem::path file_path, std::string aes_key);
+
 	/// <summary>
 	/// Encrypts and sends a file through the socket.
 	/// </summary>
-	/// <param name="plain_size"></param>
-	void send_local_file(std::string, boost::asio::ip::tcp::socket& socket);
+	void send(boost::asio::ip::tcp::socket& socket);
+
 	/// <summary>
 	/// Returns the file size, after it was encrypted.
 	/// </summary>
-	static size_t calculate_encrypted_size(size_t plain_size);
+	size_t encrypted_size();
 };
 
