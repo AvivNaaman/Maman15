@@ -112,7 +112,7 @@
     <ClCompile Include="CRC.cpp" />
     <ClCompile Include="EncryptedFileSender.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="RSADecryptor.cpp" />
+    <ClCompile Include="RSAManager.cpp" />
     <ClCompile Include="util.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -120,7 +120,7 @@
     <ClInclude Include="CRC.h" />
     <ClInclude Include="EncryptedFileSender.h" />
     <ClInclude Include="protocol.h" />
-    <ClInclude Include="RSADecryptor.h" />
+    <ClInclude Include="RSAManager.h" />
     <ClInclude Include="util.h" />
   </ItemGroup>
   <ItemGroup>

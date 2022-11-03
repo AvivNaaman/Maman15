@@ -24,7 +24,7 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="RSADecryptor.cpp">
+    <ClCompile Include="RSAManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="EncryptedFileSender.cpp">
@@ -44,7 +44,7 @@
     <ClInclude Include="protocol.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RSADecryptor.h">
+    <ClInclude Include="RSAManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="EncryptedFileSender.h">

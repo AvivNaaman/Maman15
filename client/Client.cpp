@@ -33,7 +33,7 @@ inline T Client::get_request(ClientRequestsCode code)
 	to_prepare.version = PROTOCOL_VERSION;
 	to_prepare.code = code;
 	to_prepare.payload_size = sizeof(T) - sizeof(ClientRequestBase);
-	memcpy(to_prepare.header_user_id, info_file.header_user_id, sizeof(info_file.header_user_id));
+	memcpy_s(to_prepare.header_user_id, sizeof(to_prepare.header_user_id), info_file.header_user_id, sizeof(info_file.header_user_id));
 	return to_prepare;
 }
 
@@ -54,11 +54,11 @@ void Client::register_user(std::string user_name) {
 		throw std::runtime_error("User already registered!");
 
 	if (user_name.length() > MAX_USER_NAME_LENGTH - 1)
-		throw std::invalid_argument("user_name");
+		throw std::invalid_argument("Specified user name cannot be longer than " + std::to_string(MAX_USER_NAME_LENGTH - 1) + " chars!");
 
 	// Build & Send request
 	auto request = get_request<RegisterRequestType>(ClientRequestsCode::RequestCodeRegister);
-	memcpy(request.user_name, user_name.c_str(), sizeof(request.user_name));
+	strcpy_s(request.user_name, sizeof(request.user_name), user_name.c_str());
 	SocketHelper::send_static(&request, this->socket);
 
 	// Fetch response
@@ -67,14 +67,16 @@ void Client::register_user(std::string user_name) {
 	SocketHelper::recieve_static(&payload, this->socket);
 
 	// Temporarily save assigned user id
-	memcpy(info_file.header_user_id, payload.client_id, sizeof(info_file.header_user_id));
-
-	std::cout << "Registered client successfully!";
+	memcpy_s(info_file.header_user_id, sizeof(info_file.header_user_id), payload.client_id, sizeof(payload.client_id));
 
 	// generate key pair - because registered.
 	rsa.gen_key();
 
 	info_file.user_name = user_name;
+	info_file.rsa_private_key = rsa.get_private_key();
+	_registered = true;
+
+	info_file.save();
 }
 
 void Client::exchange_keys()
@@ -85,8 +87,9 @@ void Client::exchange_keys()
 
 	auto request = get_request<KeyExchangeRequestType>(ClientRequestsCode::RequestCodeKeyExchange);
 	// send public key
-	memcpy(request.public_key, rsa.get_public_key().c_str(), sizeof(request.public_key));
-	memcpy(request.user_name, info_file.user_name.c_str(), sizeof(request.user_name));
+	auto pubkey = rsa.get_public_key();
+	memcpy_s(request.public_key, sizeof(request.public_key), pubkey.c_str(), pubkey.length());
+	strcpy_s(request.user_name, sizeof(request.user_name), info_file.user_name.c_str());
 	SocketHelper::send_static(&request, socket);
 
 	auto header = get_header(ServerResponseCode::ResponseCodeExchangeAes);
@@ -99,10 +102,7 @@ void Client::exchange_keys()
 	SocketHelper::recieve_dynamic(key_dest, socket, key_exp_size);
 	std::string aes_key = rsa.decrypt(std::string(key_dest, key_exp_size));
 	this->aes_key = aes_key;
-	info_file.save();
 }
-
-#define SEND_FILE_RETRY_COUNT (3)
 
 unsigned int Client::upload_single_file(std::filesystem::path file_path) {
 	if (!_registered) {
@@ -134,6 +134,11 @@ void Client::send_file(std::filesystem::path file_path)
 	// file details
 	auto file_name = file_path.filename().string();
 	auto file_crc = CRC().calculate(file_path.string());
+
+	if (file_name.length() > MAX_FILENAME_SIZE - 1) {
+		throw std::invalid_argument("Name of file cannot be longer than " + std::to_string(MAX_FILENAME_SIZE - 1) + " chars!");
+	}
+
 	// recovery process variables
 	int tries_left = SEND_FILE_RETRY_COUNT;
 	auto upload_verified = false;
@@ -153,7 +158,7 @@ void Client::send_file(std::filesystem::path file_path)
 		// Update server with the checksum validation result
 		auto crequest = get_request<ChecksumStatusRequest>(status_code);
 		strcpy_s(crequest.file_name, sizeof(crequest.file_name), file_name.c_str());
-		memcpy(crequest.client_id, info_file.header_user_id, sizeof(info_file.header_user_id));
+		memcpy_s(crequest.client_id, sizeof(crequest.client_id), info_file.header_user_id, sizeof(info_file.header_user_id));
 		SocketHelper::send_static(&crequest, socket);
 
 		// wait for server OK response before continuing.

@@ -54,7 +54,7 @@ public:
 /// <summary>
 /// A helper class to perform read/write operations on UIDs with streams.
 /// </summary>
-class Uid {
+class Uuid {
 public:
 	/// <summary>
 	/// parses uid from string to a buffer.
@@ -72,18 +72,29 @@ public:
 	/// Encodes a string to it's base64 representation.
 	/// </summary>
 	static std::string decode(const std::string& source);
+
 	/// <summary>
 	/// Decodes a base64 string to it's respresentation.
 	/// </summary>
-	/// <param name="source"></param>
-	/// <returns></returns>
 	static std::string encode(const std::string& source);
 };
 
+/// <summary>
+/// This class holds information and data for the client,
+/// and enables storing them permanently.
+/// </summary>
+class ClientData {
 
-class MeInfo {
-	bool _file_loaded;
 	static const std::string FILE_NAME;
+
+	/// <summary>
+	/// Indicates whether the current client data was correctly loaded from the local source.
+	/// </summary>
+	bool _file_loaded;
+
+	/// <summary>
+	/// Tries to load the client data from the local source.
+	/// </summary>
 	bool try_load();
 public:
 
@@ -97,9 +108,25 @@ public:
 	/// </summary>
 	u_char header_user_id[USER_ID_SIZE_BYTES] = { 0 };
 
+	/// <summary>
+	/// Current private RSA key of the client.
+	/// </summary>
 	std::string rsa_private_key;
 
-	MeInfo();
+
+	/// <summary>
+	/// Creates an instance of the client data, trying to load the data from the local source.
+	/// </summary>
+	ClientData();
+
+	/// <summary>
+	/// Saves the current data into the local source.
+	/// </summary>
 	void save();
+
+
+	/// <summary>
+	/// Returns whether settings file was loaded to the data class.
+	/// </summary>
 	bool is_loaded();
 };

@@ -35,23 +35,29 @@ TransferInfo get_transfer_information() {
 }
 
 int main() {
-	auto tinfo = get_transfer_information();
-	Client c(tinfo.host, tinfo.port);
-	std::cout << "Client connected." << std::endl;
+	try {
+		auto tinfo = get_transfer_information();
+		Client c(tinfo.host, tinfo.port);
+		std::cout << "Client connected." << std::endl;
 
-	if (!c.is_registered()) {
-		c.register_user(tinfo.user_name);
-		std::cout << "Registration succeeded." << std::endl;
+		if (!c.is_registered()) {
+			c.register_user(tinfo.user_name);
+			std::cout << "Registration succeeded." << std::endl;
+		}
+		else {
+			std::cout << "Client is already registered with the server.";
+		}
+
+		c.exchange_keys();
+		std::cout << "Keys exchanged." << std::endl;
+
+		c.send_file(tinfo.file_path);
+		std::cout << "File sent & verified." << std::endl;
+
+		return 0;
 	}
-	else {
-		std::cout << "Client is already registered with the server.";
+	catch (const std::exception& ex) {
+		std::cerr << "Exception! " << ex.what() << std::endl;
+		return 1;
 	}
-
-	c.exchange_keys();
-	std::cout << "Keys exchanged." << std::endl;
-
-	c.send_file(tinfo.file_path);
-	std::cout << "File sent & verified." << std::endl;
-
-	return 0;
 }

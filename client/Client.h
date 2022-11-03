@@ -6,7 +6,7 @@
 #include <boost/asio.hpp>
 #include "util.h"
 #include "protocol.h"
-#include "RSADecryptor.h"
+#include "RSAManager.h"
 #include "EncryptedFileSender.h"
 
 using boost::asio::ip::tcp;
@@ -26,9 +26,9 @@ private:
 	bool _registered = false;
 
 
-	RSADecryptor rsa;
+	RSAManager rsa;
 	std::string aes_key;
-	MeInfo info_file;
+	ClientData info_file;
 public:
 	static const std::string INFO_FILE_NAME;
 

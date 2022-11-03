@@ -330,5 +330,10 @@ def encrypt_with_rsa(publickey: bytes, short_data: bytes) -> bytes:
 
 
 class ClientDisconnectedException(IOError):
-    """ Use this exception to notify of client unexpected disconnection. """
+    """ Raise this exception to notify of client unexpected disconnection. """
+    pass
+
+
+class CloseClientException(Exception):
+    """ Raise this exception to request connection close of a client. """
     pass

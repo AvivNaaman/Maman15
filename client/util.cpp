@@ -22,7 +22,7 @@ inline unsigned char parse_hex_byte(const char* hexdigits) {
 	return (parse_hex(first) << 4) + parse_hex(second);
 }
 
-void Uid::parse(const std::string& input, unsigned char* destination) {
+void Uuid::parse(const std::string& input, unsigned char* destination) {
 	// validate size
 	if (input.length() != USER_ID_SIZE_BYTES * 2)
 		throw std::invalid_argument("Input string is not in the correct length.");
@@ -33,7 +33,7 @@ void Uid::parse(const std::string& input, unsigned char* destination) {
 	}
 }
 
-void Uid::write(std::ostream &out_s, unsigned char* source, size_t len) {
+void Uuid::write(std::ostream &out_s, unsigned char* source, size_t len) {
 	for (int i = 0; i < len; ++i)
 		out_s << std::hex << std::setw(2) << std::setfill('0') << (int) static_cast <unsigned char>(source[i]);
 }
@@ -65,17 +65,18 @@ std::string Base64::decode(const std::string& str)
 }
 
 #include <fstream>
-const std::string MeInfo::FILE_NAME = "me.info";
+const std::string ClientData::FILE_NAME = "me.info";
 
-MeInfo::MeInfo() {
+ClientData::ClientData() {
 	_file_loaded = false;
+
 	if (try_load()) {
 		_file_loaded = true;
 	}
 }
 
 
-void MeInfo::save() {
+void ClientData::save() {
 	std::ofstream info_file(FILE_NAME);
 
 	if (!info_file.is_open()) {
@@ -84,13 +85,16 @@ void MeInfo::save() {
 
 	info_file << this->user_name << std::endl;
 
-	Uid::write(info_file, this->header_user_id, sizeof(this->header_user_id));
+	Uuid::write(info_file, this->header_user_id, sizeof(this->header_user_id));
 
 	info_file << std::endl << Base64::encode(this->rsa_private_key);
+
+	// file is up-to-date with loaded data!
+	_file_loaded = true;
 }
 
 
-bool MeInfo::try_load() {
+bool ClientData::try_load() {
 	try {
 		std::ifstream info_file(FILE_NAME);
 
@@ -106,7 +110,7 @@ bool MeInfo::try_load() {
 		info_file >> temp_line;
 		if (temp_line.empty()) return false;
 
-		Uid::parse(temp_line, this->header_user_id);
+		Uuid::parse(temp_line, this->header_user_id);
 		// TODO: Validate this!
 #define PRIVATE_KEY_SIZE_BASE64 (844)
 
@@ -126,6 +130,6 @@ bool MeInfo::try_load() {
 	}
 }
 
-bool MeInfo::is_loaded() {
+bool ClientData::is_loaded() {
 	return _file_loaded;
 }

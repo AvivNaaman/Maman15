@@ -5,7 +5,7 @@
 #include <cryptopp/rsa.h>
 #include <cryptopp/osrng.h>
 
-class RSADecryptor
+class RSAManager
 {
 private:
 	CryptoPP::AutoSeededRandomPool _rng;
@@ -15,7 +15,7 @@ public:
 	/// <summary>
 	/// Creates a new, empty instance of a decryptor.
 	/// </summary>
-	RSADecryptor();
+	RSAManager();
 
 	/// <summary>
 	/// Loads an existing RSA private key into the decryptor.

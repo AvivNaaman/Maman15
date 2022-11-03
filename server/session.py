@@ -6,11 +6,12 @@ import utils
 from db import Database
 from protocol import *
 
+
 class ClientSession(threading.Thread):
     """ Represents a session of the server with the client - Runs in the background as a thread. """
 
     def __init__(self, client_socket: socket, database: Database):
-        super().__init__(daemon=True)
+        super().__init__(daemon=True)  # Daemonize to prevent quit blocks
         self.__client = client_socket
         self.__db = database
         self.__logger = logging.getLogger("ClientSession")
@@ -24,11 +25,15 @@ class ClientSession(threading.Thread):
         except ClientDisconnectedException:
             self.__logger.info("Client disconnected.")
 
+        except utils.CloseClientException:
+            self.__logger.info("Shutting connection down.")
+
         except Exception as ex:
             import traceback
-            self.__logger.error(f"Error raised while processing client: {traceback.format_exc()}")
+            self.__logger.error(
+                f"Error raised while processing client - Closing connection: {traceback.format_exc()}. ")
+            self.__client.close()
             raise ex
-
 
     def handle_single_request(self):
         """ Parses a single requests, and calls the specified request handler in the HANDLERS_MAP """
@@ -40,14 +45,18 @@ class ClientSession(threading.Thread):
         content = receive_request_part(self.__client, request_content_type)
 
         if header.code != ClientRequestCodes.Register:
-            self.__db.set_last_seen(header.user_id)
+            if self.__db.user_exists(header.user_id):
+                self.__db.set_last_seen(header.user_id)
+            else:
+                self.__logger.info("User with specified id does not exist.")
+                raise utils.CloseClientException()
 
         # Execute extra logic by request type
         self.HANDLERS_MAP[header_request](self, header, content)
 
     def register(self, header: RequestHeader, content: RegisterRequestContent):
         """ Handels registration requests. """
-        if self.__db.user_exists(content.name):
+        if self.__db.user_name_in_use(content.name):
             self.__client.send(get_response(ServerResponseCodes.RegistrationFailed))
             self.__logger.debug(f"Failed registration of duplicated user name {content.name}")
             return
@@ -110,7 +119,6 @@ class ClientSession(threading.Thread):
         """ Returns a response with the default code & content. """
         self.__client.send(get_response(ServerResponseCodes.MessageOk))
 
-    
     # Maps Request types to their logic handlers
     HANDLERS_MAP = {
         ClientRequestCodes.Register: register,

@@ -1,21 +1,21 @@
-#include "RSADecryptor.h"
+#include "RSAManager.h"
 #include "protocol.h"
 
-RSADecryptor::RSADecryptor() {}
+RSAManager::RSAManager() {}
 
-void RSADecryptor::setKey(std::string key)
+void RSAManager::setKey(std::string key)
 {
 	CryptoPP::StringSource ss(key, true);
 	_privateKey.Load(ss);
 }
 
-void RSADecryptor::gen_key()
+void RSAManager::gen_key()
 {
 	_privateKey.Initialize(_rng, RSA_KEY_LENGTH_BITS);
 	_initialized = true;
 }
 
-std::string RSADecryptor::decrypt(std::string cipher)
+std::string RSAManager::decrypt(std::string cipher)
 {
 	std::string decrypted;
 	CryptoPP::RSAES_OAEP_SHA_Decryptor d(_privateKey);
@@ -23,7 +23,7 @@ std::string RSADecryptor::decrypt(std::string cipher)
 	return decrypted;
 }
 
-std::string RSADecryptor::get_public_key()
+std::string RSAManager::get_public_key()
 {
 	CryptoPP::RSAFunction publicKey(_privateKey);
 	std::string key;
@@ -32,7 +32,7 @@ std::string RSADecryptor::get_public_key()
 	return key;
 }
 
-std::string RSADecryptor::get_private_key()
+std::string RSAManager::get_private_key()
 {
 	std::string key;
 	CryptoPP::StringSink ss(key);

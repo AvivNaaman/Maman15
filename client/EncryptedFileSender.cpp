@@ -17,7 +17,7 @@ void EncryptedFileSender::send(boost::asio::ip::tcp::socket& socket) {
 	std::ifstream to_send(file_path, std::ios::binary);
 
 	unsigned char key_temp[AES_KEY_LENGTH_BYTES];
-	memcpy(key_temp, _aes_key.c_str(), sizeof(key_temp));
+	memcpy_s(key_temp, sizeof(key_temp), _aes_key.c_str(), _aes_key.length());
 
 	CryptoPP::CBC_Mode<CryptoPP::AES>::Encryption e;
 

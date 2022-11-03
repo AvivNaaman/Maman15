@@ -8,14 +8,17 @@ This file contains protocol specific defintitions such as codes, sizes and data 
 #define AES_KEY_LENGTH_BYTES (16)
 #define RSA_KEY_LENGTH_BITS (1024)
 
+// Note: The below numbers are buffer sizes, including null-termination.
 #define PUBLIC_KEY_SIZE_BYTES (160)
 #define USER_ID_SIZE_BYTES (16)
 #define MAX_USER_NAME_LENGTH (255)
-#define PUBLIC_KEY_EXPORTED_SIZE (160) // TODO: Check automatic formula option.
+#define PUBLIC_KEY_EXPORTED_SIZE (160)
 #define MAX_FILENAME_SIZE (255)
 #define EXCHANGED_AES_KEY_SIZE_LIMIT (512)
 
 #define PROTOCOL_VERSION (3)
+
+#define SEND_FILE_RETRY_COUNT (3)
 
 /// <summary>
 /// The codes for each client request.

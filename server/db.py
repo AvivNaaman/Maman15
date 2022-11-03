@@ -174,13 +174,17 @@ CREATE TABLE IF NOT EXISTS files (
             cursor.close()
             self.sqlite_conn.commit()
 
-    def user_exists(self, user_name) -> bool:
+    def user_name_in_use(self, user_name) -> bool:
         """ Returns whether user name already taken in database """
         with self.lock:
             cursor = self.sqlite_conn.cursor()
             matches = cursor.execute("SELECT * FROM clients WHERE Name=?", [user_name]).fetchall()
             cursor.close()
         return len(matches) > 0
+    
+    def user_exists(self, user_id: UUID) -> bool:
+        with self.lock:
+            return user_id in self.users
 
     def close(self):
         self.sqlite_conn.close()
