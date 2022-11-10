@@ -28,12 +28,16 @@ class ClientSession(threading.Thread):
         except utils.CloseClientException:
             self.__logger.info("Shutting connection down.")
 
-        except Exception as ex:
+        except Exception:
             import traceback
             self.__logger.error(
-                f"Error raised while processing client - Closing connection: {traceback.format_exc()}. ")
+                f"Error raised while processing client - Closing connection: {traceback.format_exc()}")
+
+        # Just ignore any issue while trying to close client socket anyway
+        try:
             self.__client.close()
-            raise ex
+        except IOError:
+            pass
 
     def handle_single_request(self):
         """ Parses a single requests, and calls the specified request handler in the HANDLERS_MAP """

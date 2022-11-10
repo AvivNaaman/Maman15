@@ -3,7 +3,7 @@
 /// <summary>
 /// This class provides helper methods to handle socket operations with boost::asio::ip::tcp::socket objects.
 /// </summary>
-static class SocketHelper {
+class SocketHelper {
 private:
 	/// <summary>
 	/// Helper union to switch between raw & structual representation of a struct memory

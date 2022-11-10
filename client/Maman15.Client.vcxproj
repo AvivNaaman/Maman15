@@ -114,7 +114,7 @@
     <ClCompile Include="RSAManager.cpp" />
     <ClCompile Include="MeInfo.cpp" />
     <ClCompile Include="util\CRC.cpp" />
-    <ClCompile Include="util\Formats.cpp" />
+    <ClCompile Include="util\formats.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Client.h" />
@@ -123,7 +123,7 @@
     <ClInclude Include="RSAManager.h" />
     <ClInclude Include="MeInfo.h" />
     <ClInclude Include="util\CRC.h" />
-    <ClInclude Include="util\Formats.h" />
+    <ClInclude Include="util\formats.h" />
     <ClInclude Include="util\SocketHelper.h" />
   </ItemGroup>
   <ItemGroup>

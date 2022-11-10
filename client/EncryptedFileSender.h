@@ -4,6 +4,9 @@
 #include <cryptopp/aes.h>
 #include "protocol.h"
 
+/// <summary>
+/// This class helps with sending encrypted files and operating on them.
+/// </summary>
 class EncryptedFileSender
 {
 	/// <summary>
@@ -19,7 +22,11 @@ class EncryptedFileSender
 	/// </summary>
 	static const CryptoPP::byte iv[CryptoPP::AES::BLOCKSIZE];
 
+	/// <summary>
+	/// holds the current file path
+	/// </summary>
 	std::filesystem::path file_path;
+
 public:
 	/// <summary>
 	/// Creates a new encrypted file sender.

@@ -92,6 +92,10 @@ uint32_t CRC::calculate(std::string filePath)
 {
 	crc = nchar = 0;
 	std::ifstream in_file(filePath, std::ios::binary);
+
+	if (!in_file.is_open())
+		throw std::runtime_error("Failed to open file for CRC! path: " + filePath);
+
 	char* buf = new char[4098];
 	uint32_t extracted = 0;
 	while (!in_file.eof()) {

@@ -43,8 +43,8 @@ public:
 	/// Requests a registration from the server.
 	/// </summary>
 	/// <param name="name">The user name to provide for the server</param>
-	/// <returns>The server - generated user ID</returns>
-	void register_user(std::string name);
+	/// <returns>Whether registration succeeeded</returns>
+	bool register_user(std::string name);
 
 
 	/// <summary>

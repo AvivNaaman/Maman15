@@ -33,15 +33,12 @@
     <ClCompile Include="util\CRC.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="util\Formats.cpp">
+    <ClCompile Include="util\formats.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Client.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="util.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="protocol.h">
@@ -53,16 +50,16 @@
     <ClInclude Include="EncryptedFileSender.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CRC.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="util\CRC.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="util\Formats.h">
+    <ClInclude Include="util\formats.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="util\SocketHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MeInfo.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

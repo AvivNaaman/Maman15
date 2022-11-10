@@ -21,6 +21,7 @@ class MeInfo {
 	/// Tries to load the client data from the local source.
 	/// </summary>
 	bool try_load();
+
 public:
 
 	/// <summary>

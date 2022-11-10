@@ -53,21 +53,15 @@ bool MeInfo::try_load() {
 		if (temp_line.empty()) return false;
 
 		Uuid::parse(temp_line, this->header_user_id);
-		// TODO: Validate this!
-#define PRIVATE_KEY_SIZE_BASE64 (844)
-
 
 		// private key
 		info_file >> temp_line;
-		if (temp_line.length() != PRIVATE_KEY_SIZE_BASE64) {
-			return false;
-		}
 
 		// decode & set
 		rsa_private_key = Base64::decode(temp_line);
 		return true;
 	}
-	catch (const std::exception& ex) {
+	catch (const std::exception&) {
 		return false;
 	}
 }

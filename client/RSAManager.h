@@ -5,6 +5,9 @@
 #include <cryptopp/rsa.h>
 #include <cryptopp/osrng.h>
 
+/// <summary>
+/// This class helps with generating and manipulating RSA keys & encrypted data.
+/// </summary>
 class RSAManager
 {
 private:

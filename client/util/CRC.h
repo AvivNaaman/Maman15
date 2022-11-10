@@ -2,10 +2,14 @@
 #include <stdint.h>
 #include <string>
 
+/// <summary>
+/// This is a helper class for CRC (Cyclic Redundancy Check) 32-bit calculations.
+/// </summary>
 class CRC
 {
 	uint32_t crc;
 	size_t nchar;
+
 public:
 	/// <summary>
 	/// Constructs a new CRC Handler.
