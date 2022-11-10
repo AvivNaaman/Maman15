@@ -1,4 +1,6 @@
 import socket
+import traceback
+
 from session import ClientSession
 import logging
 
@@ -14,6 +16,7 @@ class Server:
 
     def __init__(self):
         self.__port = self.__get_port_number()
+        self.__logger = logging.getLogger("Server")
 
     def __get_port_number(self):
         """ Returns the bind port of the server. """
@@ -21,7 +24,7 @@ class Server:
             with open(self.PORT_INFO_FILENAME) as file:
                 return int(file.readline())
         except:
-            logging.warning(f"Failed to get port number from {self.PORT_INFO_FILENAME}."
+            self.__logger.warning(f"Failed to get port number from {self.PORT_INFO_FILENAME}."
                             f" falling back to default port number {self.DEFAULT_PORT}.")
 
     def start(self):
@@ -33,11 +36,12 @@ class Server:
                 server.bind((self.BIND_HOST, self.__port))
                 server.listen()
 
-                logging.info(f"Server bounded to {self.BIND_HOST}:{self.__port}. Waiting for clients.")
+                self.__logger.info(f"Server bounded to {self.BIND_HOST}:{self.__port}. Waiting for clients.")
 
                 while True:
                     client_socket, address = server.accept()
-                    logging.info(f"Got a new client from address {address}.")
+                    self.__logger.info(f"Got a new client from address {address}.")
                     ClientSession(client_socket, database).start()
         except:
             database.close()
+            self.__logger.error(f"Closed because of exception! {traceback.format_exc()}")
