@@ -1,8 +1,7 @@
+#include "formats.h"
 #include <string>
 #include <iomanip>
-#include "util.h"
 #include <cryptopp/base64.h>
-#include "protocol.h"
 
 inline unsigned char parse_hex(char digit) {
 	if ('a' <= digit && digit <= 'f') {
@@ -22,13 +21,15 @@ inline unsigned char parse_hex_byte(const char* hexdigits) {
 	return (parse_hex(first) << 4) + parse_hex(second);
 }
 
+
+
 void Uuid::parse(const std::string& input, unsigned char* destination) {
 	// validate size
-	if (input.length() != USER_ID_SIZE_BYTES * 2)
+	if (input.length() != Uuid::UUID_SIZE_BYTES * 2)
 		throw std::invalid_argument("Input string is not in the correct length.");
 
 	// parse each couple of chars
-	for (int i = 0; i < USER_ID_SIZE_BYTES; ++i) {
+	for (int i = 0; i < Uuid::UUID_SIZE_BYTES; ++i) {
 		destination[i] = parse_hex_byte(input.c_str() + 2 * i);
 	}
 }
@@ -62,74 +63,4 @@ std::string Base64::decode(const std::string& str)
 	); // StringSource
 
 	return decoded;
-}
-
-#include <fstream>
-const std::string ClientData::FILE_NAME = "me.info";
-
-ClientData::ClientData() {
-	_file_loaded = false;
-
-	if (try_load()) {
-		_file_loaded = true;
-	}
-}
-
-
-void ClientData::save() {
-	std::ofstream info_file(FILE_NAME);
-
-	if (!info_file.is_open()) {
-		return;
-	}
-
-	info_file << this->user_name << std::endl;
-
-	Uuid::write(info_file, this->header_user_id, sizeof(this->header_user_id));
-
-	info_file << std::endl << Base64::encode(this->rsa_private_key);
-
-	// file is up-to-date with loaded data!
-	_file_loaded = true;
-}
-
-
-bool ClientData::try_load() {
-	try {
-		std::ifstream info_file(FILE_NAME);
-
-		if (!info_file.is_open()) {
-			return false;
-		}
-		// user name
-		std::getline(info_file, this->user_name);
-
-		std::string temp_line;
-
-		// user id
-		info_file >> temp_line;
-		if (temp_line.empty()) return false;
-
-		Uuid::parse(temp_line, this->header_user_id);
-		// TODO: Validate this!
-#define PRIVATE_KEY_SIZE_BASE64 (844)
-
-
-		// private key
-		info_file >> temp_line;
-		if (temp_line.length() != PRIVATE_KEY_SIZE_BASE64) {
-			return false;
-		}
-
-		// decode & set
-		rsa_private_key = Base64::decode(temp_line);
-		return true;
-	}
-	catch (const std::exception& ex) {
-		return false;
-	}
-}
-
-bool ClientData::is_loaded() {
-	return _file_loaded;
 }

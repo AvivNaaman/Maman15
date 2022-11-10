@@ -4,7 +4,7 @@
 #include <string>
 #include <filesystem>
 #include <boost/asio.hpp>
-#include "util.h"
+#include "MeInfo.h"
 #include "protocol.h"
 #include "RSAManager.h"
 #include "EncryptedFileSender.h"
@@ -28,7 +28,7 @@ private:
 
 	RSAManager rsa;
 	std::string aes_key;
-	ClientData info_file;
+	MeInfo info_file;
 public:
 	static const std::string INFO_FILE_NAME;
 
@@ -50,14 +50,14 @@ public:
 	/// <summary>
 	/// Executes a key-exchange of the client with the server.
 	/// </summary>
-	/// <returns>the server's secret AES Key.</returns>
 	void exchange_keys();
 
 	/// <summary>
 	///  Sends a file to the server.
 	/// </summary>
 	/// <param name="file_path">The local file path to send.</param>
-	void send_file(std::filesystem::path file_path);
+	/// <returns>Whether file upload executed succesfuuly, or failed otherwise</returns>
+	bool send_file(std::filesystem::path file_path);
 
 	/// <summary>
 	/// Returns whether the current client is a registered user in the server.
@@ -87,6 +87,6 @@ private:
 	/// Executes upload request of a single file, and returns the result CRC if succeeded.
 	/// </summary>
 	/// <returns></returns>
-	unsigned int upload_single_file(std::filesystem::path file_path);
+	unsigned int request_file_upload(std::filesystem::path file_path);
 };
 

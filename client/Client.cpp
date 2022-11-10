@@ -1,9 +1,9 @@
 #include <fstream>
 #include "Client.h"
 #include "protocol.h"
-#include "util.h"
 #include <iostream>
-#include "CRC.h"
+#include "util/CRC.h"
+#include "util/SocketHelper.h"
 
 using boost::asio::ip::tcp;
 
@@ -104,7 +104,7 @@ void Client::exchange_keys()
 	this->aes_key = aes_key;
 }
 
-unsigned int Client::upload_single_file(std::filesystem::path file_path) {
+unsigned int Client::request_file_upload(std::filesystem::path file_path) {
 	if (!_registered) {
 		throw std::runtime_error("User must be registered & have keys to begin file upload!");
 	}
@@ -129,7 +129,7 @@ unsigned int Client::upload_single_file(std::filesystem::path file_path) {
 	return payload.checksum;
 }
 
-void Client::send_file(std::filesystem::path file_path)
+bool Client::send_file(std::filesystem::path file_path)
 {
 	// file details
 	auto file_name = file_path.filename().string();
@@ -146,13 +146,16 @@ void Client::send_file(std::filesystem::path file_path)
 	while (tries_left > 0 && !upload_verified) {
 		tries_left--;
 
-		auto server_checksum = upload_single_file(file_path);
+		auto server_checksum = request_file_upload(file_path);
 
-		// validate checksum
-		ClientRequestsCode status_code = (tries_left > 0) ? ClientRequestsCode::RequestCodeInvalidChecksumRetry : ClientRequestsCode::RequestCodeInvalidChecksumAbort;
+		// validate checksum - and choose status to return for server.
+		ClientRequestsCode status_code = ClientRequestsCode::RequestCodeInvalidChecksumAbort;
 		if (server_checksum == file_crc) {
 			upload_verified = true;
 			status_code = ClientRequestsCode::RequestCodeValidChecksum;
+		}
+		else if (tries_left > 0) {
+			status_code = ClientRequestsCode::RequestCodeInvalidChecksumRetry;
 		}
 
 		// Update server with the checksum validation result
@@ -164,6 +167,8 @@ void Client::send_file(std::filesystem::path file_path)
 		// wait for server OK response before continuing.
 		get_header(ServerResponseCode::ResponseCodeMessageOk);
 	}
+
+	return upload_verified;
 }
 
 bool Client::is_registered()

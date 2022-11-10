@@ -109,19 +109,22 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Client.cpp" />
-    <ClCompile Include="CRC.cpp" />
     <ClCompile Include="EncryptedFileSender.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="RSAManager.cpp" />
-    <ClCompile Include="util.cpp" />
+    <ClCompile Include="MeInfo.cpp" />
+    <ClCompile Include="util\CRC.cpp" />
+    <ClCompile Include="util\Formats.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Client.h" />
-    <ClInclude Include="CRC.h" />
     <ClInclude Include="EncryptedFileSender.h" />
     <ClInclude Include="protocol.h" />
     <ClInclude Include="RSAManager.h" />
-    <ClInclude Include="util.h" />
+    <ClInclude Include="MeInfo.h" />
+    <ClInclude Include="util\CRC.h" />
+    <ClInclude Include="util\Formats.h" />
+    <ClInclude Include="util\SocketHelper.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="me.info" />

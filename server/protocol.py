@@ -31,7 +31,8 @@ class ClientRequestCodes(Enum):
     InvalidChecksumAbort = 1106
 
 
-class AutoCastTypesDataClass:
+class RequestPartBase:
+    """ This base class helps to make auto type casting for dataclass fields from network data types. """
     def __post_init__(self):
         """
         This method parses all bytes objects in dataclass to other types, specified by dataclass.
@@ -45,14 +46,16 @@ class AutoCastTypesDataClass:
                 # Decode bytes
                 value = value.decode(TEXT_ENCODING)
                 # Remove null terminator if exists
-                if '\0' in value:
-                    value = value.split('\0', 1)[0]
+                value = value.split('\0', 1)[0]
+                    
             # Parse UUID
             elif field.type is UUID and type(value) is bytes:
                 value = UUID(bytes=value)
+                
             # Parse Enum
             elif issubclass(field.type, Enum):
                 value = field.type(value)
+                
             else:
                 continue
             setattr(self, field.name, value)
@@ -61,7 +64,7 @@ class AutoCastTypesDataClass:
 # These dataclasses hold the request information
 
 @dataclass
-class RequestHeader(AutoCastTypesDataClass):
+class RequestHeader(RequestPartBase):
     user_id: UUID
     version: int
     code: ClientRequestCodes
@@ -69,25 +72,25 @@ class RequestHeader(AutoCastTypesDataClass):
 
 
 @dataclass
-class RegisterRequestContent(AutoCastTypesDataClass):
+class RegisterRequestContent(RequestPartBase):
     name: str
 
 
 @dataclass
-class KeyExchangeContent(AutoCastTypesDataClass):
+class KeyExchangeContent(RequestPartBase):
     name: str
     public_key: bytes
 
 
 @dataclass
-class FileUploadContent(AutoCastTypesDataClass):
+class FileUploadContent(RequestPartBase):
     user_id: UUID
     file_size: int
     file_name: str
 
 
 @dataclass
-class ChecksumStatusContent(AutoCastTypesDataClass):
+class ChecksumStatusContent(RequestPartBase):
     user_id: UUID
     file_name: str
 
@@ -174,8 +177,8 @@ ResponseEncodeMap = {
 }
 
 
-def getattr_with_autocast(o, name):
-    """ Gets an attribute, and casts enums or strings to their sendable values. """
+def getattr_and_cast(o, name):
+    """ Gets an attribute of class, and casts enums or strings to their sendable values. """
     val = getattr(o, name)
     # cast enum -> integer
     if issubclass(type(val), Enum):
@@ -196,12 +199,12 @@ def encode_response_part(obj_to_encode: Any, *format_lengths) -> bytes:
     # fetch format & put argument sizes in the right places
     fmt = ResponseEncodeMap[type(obj_to_encode)]
     fmt = fmt.format(*format_lengths)
-    # build values to pack, and cast them to encodable types.
-    vals = [getattr_with_autocast(obj_to_encode, f.name) for f in fields(obj_to_encode)]
+    # get values to pack (cast as needed), and cast them to encodable types.
+    vals = [getattr_and_cast(obj_to_encode, f.name) for f in fields(obj_to_encode)]
     return struct.pack(fmt, *vals)
 
 
-def get_response(code: ServerResponseCodes, payload=None, *format_lengths) -> bytes:
+def build_response(code: ServerResponseCodes, payload=None, *format_lengths) -> bytes:
     """
     Returns a full bytes-response of the server to a client, for a certain response part.
     :param code: The response type code

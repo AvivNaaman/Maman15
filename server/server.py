@@ -13,10 +13,9 @@ class Server:
     BIND_HOST = '0.0.0.0'
 
     def __init__(self):
-        self.__port = self.get_port_number()
-        self.__started = False
+        self.__port = self.__get_port_number()
 
-    def get_port_number(self):
+    def __get_port_number(self):
         """ Returns the bind port of the server. """
         try:
             with open(self.PORT_INFO_FILENAME) as file:
@@ -26,7 +25,7 @@ class Server:
                             f" falling back to default port number {self.DEFAULT_PORT}.")
 
     def start(self):
-        """ Starts the server. """
+        """ Starts the created server instance. """
         database = Database()
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:

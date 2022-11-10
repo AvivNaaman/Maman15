@@ -10,6 +10,7 @@ from typing import Dict, Optional
 
 @dataclass
 class User:
+    """ Represents a client (user) in the database. """
     id: UUID
     name: str
     public_key: Optional[bytes] = None
@@ -19,12 +20,11 @@ class User:
 
 @dataclass
 class File:
+    """ Represents a file in the database. """
     id: UUID
     file_name: str
     path_name: str
     verified: bool = False
-
-# TODO: Do I Need to use SQLite for data, but not RAM for the same data?
 
 
 class Database:
@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS files (
         self.sqlite_conn.commit()
 
     def __load_data(self):
-        """ This method loads all the persistant SQLite3 DB data into the memory. TODO: Is this required? """
+        """ This method loads all the persistant SQLite3 DB data into the memory. """
         cursor = self.sqlite_conn.cursor()
         all_files = cursor.execute("SELECT * FROM files").fetchall()
         all_users = cursor.execute("SELECT * FROM clients").fetchall()
@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS files (
     def add_file(self, user_id: UUID, file_name: str, file_path: str):
         """ Inserts the information of a new file to the database. """
         file_entry = File(user_id, file_name, str(Path(file_path).absolute()))
-        self.logger.debug(f"Storing file {file_path} information of {user_id}.")
+        self.logger.debug(f"Adding information for file ''{file_path}'' in user #{user_id}.")
         with self.lock:
             self.files[user_id] = file_entry
 
@@ -186,5 +186,9 @@ CREATE TABLE IF NOT EXISTS files (
         with self.lock:
             return user_id in self.users
 
+    def get_file_path(self, user_id: UUID) -> str:
+        with self.lock:
+            return self.files[user_id].path_name
+    
     def close(self):
         self.sqlite_conn.close()

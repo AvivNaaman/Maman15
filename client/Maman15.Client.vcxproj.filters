@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="util.cpp">
+    <ClCompile Include="MeInfo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Client.cpp">
@@ -30,7 +30,10 @@
     <ClCompile Include="EncryptedFileSender.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="CRC.cpp">
+    <ClCompile Include="util\CRC.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="util\Formats.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -51,6 +54,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="CRC.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="util\CRC.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="util\Formats.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="util\SocketHelper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

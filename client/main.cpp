@@ -2,7 +2,6 @@
 #include <fstream>
 #include "Client.h"
 
-auto TRANSFER_FILE_NAME = "transfer.info";
 
 class TransferInfo {
 public:
@@ -10,33 +9,37 @@ public:
 	int port = -1;
 	std::string user_name;
 	std::filesystem::path file_path;
-};
 
-TransferInfo get_transfer_information() {
-	TransferInfo result;
-	std::string temp;
-	std::ifstream info_file(TRANSFER_FILE_NAME);
+	/// <summary>
+	/// Loads a transfer file info data from the specified file path.
+	/// </summary>
+	/// <param name="file_name">The file name to load the data from.</param>
+	TransferInfo(std::string transfer_file_name) {
+		std::string temp;
+		std::ifstream info_file(transfer_file_name);
 
-	if (!info_file.is_open()) {
-		throw std::invalid_argument("Transfer file does not exist!");
+		if (!info_file.is_open()) {
+			throw std::invalid_argument("Transfer file does not exist!");
+		}
+
+		// parse host:port.
+		std::getline(info_file, temp);
+		auto sep_index = temp.find(':');
+		host = temp.substr(0, sep_index);
+		auto port_str = temp.substr(sep_index + 1);
+		port = std::stoi(port_str);
+
+		// get user name & file to upload path.
+		std::getline(info_file, user_name);
+		std::getline(info_file, temp);
+		file_path = temp;
 	}
-
-	std::getline(info_file, temp);
-	auto sep_index = temp.find(':');
-	result.host = temp.substr(0, sep_index);
-	auto port = temp.substr(sep_index + 1);
-	result.port = std::stoi(port);
-
-	std::getline(info_file, result.user_name);
-	std::getline(info_file, temp);
-	result.file_path = temp;
-
-	return result;
-}
+};
 
 int main() {
 	try {
-		auto tinfo = get_transfer_information();
+		auto tinfo = TransferInfo("transfer.info");
+
 		Client c(tinfo.host, tinfo.port);
 		std::cout << "Client connected." << std::endl;
 
@@ -51,8 +54,12 @@ int main() {
 		c.exchange_keys();
 		std::cout << "Keys exchanged." << std::endl;
 
-		c.send_file(tinfo.file_path);
-		std::cout << "File sent & verified." << std::endl;
+		if (c.send_file(tinfo.file_path)) {
+			std::cout << "File sent & verified." << std::endl;
+		}
+		else {
+			std::cerr << "Failed to send file! Upload won't verify!" << std::endl;
+		}
 
 		return 0;
 	}
