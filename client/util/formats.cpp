@@ -43,7 +43,7 @@ void Uuid::parse(const std::string& input, unsigned char* destination) {
 }
 
 void Uuid::write(std::ostream& out_s, unsigned char* source, size_t len) {
-	for (int i = 0; i < len; ++i)
+	for (size_t i = 0; i < len; ++i)
 		out_s << std::hex << std::setw(2) << std::setfill('0') << (int) static_cast <unsigned char>(source[i]);
 }
 

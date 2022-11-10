@@ -29,5 +29,5 @@ void EncryptedFileSender::send(boost::asio::ip::tcp::socket& socket) {
 }
 
 size_t EncryptedFileSender::encrypted_size() {
-	return (ceil(std::filesystem::file_size(file_path) / static_cast<int>(CryptoPP::AES::BLOCKSIZE)) + 1) * static_cast<int>(CryptoPP::AES::BLOCKSIZE);
+	return (size_t)(ceil(std::filesystem::file_size(file_path) / static_cast<int>(CryptoPP::AES::BLOCKSIZE)) + 1) * static_cast<int>(CryptoPP::AES::BLOCKSIZE);
 }

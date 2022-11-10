@@ -100,7 +100,7 @@ uint32_t CRC::calculate(std::string filePath)
 	uint32_t extracted = 0;
 	while (!in_file.eof()) {
 		in_file.read(buf, sizeof(buf));
-		update(buf, in_file.gcount());
+		update(buf, (uint32_t)in_file.gcount());
 	}
 	uint32_t crc = digest();
 	return crc;
